@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lmorg/murex/utils/readline"
+	"github.com/lmorg/readline"
 )
 
 func main() {

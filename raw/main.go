@@ -2,12 +2,14 @@ package main
 
 import (
 	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
 	"os"
+
+	"github.com/lmorg/readline"
 )
 
 func main() {
-	terminal.MakeRaw(int(os.Stdin.Fd()))
+	readline.MakeRaw(int(os.Stdin.Fd()))
+
 	for {
 		b := make([]byte, 1024)
 		i, err := os.Stdin.Read(b)
