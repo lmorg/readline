@@ -34,7 +34,7 @@ func main() {
 			return
 		}
 
-		// Print the retuned line from readline
+		// Print the returned line from readline
 		fmt.Println("Readline: '" + line + "'")
 	}
 }
@@ -102,7 +102,7 @@ func Tab(line []rune, pos int) (string, []string, map[string]string, readline.Ta
 		// those that we have already started typing, lets build a new slice
 		// from `items` with the matched suggestions
 		if strings.HasPrefix(items[i], string(line)) {
-			// The append that happens here should be mostly self explantory
+			// The append that happens here should be mostly self explanatory
 			// however there is one surprise in that we are also cropping the
 			// string. Basically readline will output the completion suggestions
 			// verbatim. This means if your user types "foo" and your suggestion
@@ -132,7 +132,7 @@ func Tab(line []rune, pos int) (string, []string, map[string]string, readline.Ta
 	// needs to differ from what value it returns when selected). It is also
 	// worth noting that any value you enter here will not be entered on to the
 	// interactive line you're typing when the suggestion is selected. ie this
-	// string is a prefix purely for display perposes.
+	// string is a prefix purely for display purposes.
 	//
 	// `suggestions` is clearly the tab-completion suggestions slice we created
 	// above.

@@ -18,6 +18,27 @@ I get this README isn't very interesting nor helpful at the moment. I promise I
 will embellish this a little more with some useful documentation and fancy GIFs
 (etc) as and when I get time. However for now, I would recommend the following:
 
-* Reading the code in `/cmd/main.go` as this is a working example implementation
+## Example Code
 
-* https://godoc.org/github.com/lmorg/readline
+Using `readline` is as simple as:
+
+```
+func main() {
+    rl := readline.NewInstance()
+
+    for {
+        line, err := rl.Readline()
+        if err != nil {
+            fmt.Println("Error:", err)
+            return
+        }
+
+        fmt.Printf("You just typed: %s\n", line)
+    }
+}
+```
+
+However I suggest you read through the examples in `/examples` for help using
+some of the more advanced features in `readline`.
+
+The source for `readline` will also be documented in godoc: https://godoc.org/github.com/lmorg/readline
