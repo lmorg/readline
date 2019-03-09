@@ -13,7 +13,7 @@ directory) or create your own project using the code demonstrated here.
 First we need to create a slice of strings which `readline` will use as part of
 it's tab-complete suggestions:
 
-```
+```go
 var items = []string{
 	"hello",
 	"world",
@@ -23,7 +23,7 @@ var items = []string{
 Then we can create a handler function for `readline` to call which will return
 this slice we've just created:
 
-```
+```go
 func Tab(line []rune, pos int) (string, []string, map[string]string, readline.TabDisplayType) {
 	var suggestions []string
 
@@ -73,7 +73,7 @@ Lastly lets now create the main function which will instantiate `readline` and
 print it's returns back to the console:
 
 
-```
+```go
 func main() {
 	// Create a new readline instance
 	rl := readline.NewInstance()

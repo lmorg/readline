@@ -22,7 +22,7 @@ will embellish this a little more with some useful documentation and fancy GIFs
 
 Using `readline` is as simple as:
 
-```
+```go
 func main() {
     rl := readline.NewInstance()
 
