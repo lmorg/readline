@@ -2,21 +2,37 @@
 
 ## Preface
 
-This project began a few years prior to this commit history as an API for murex,
-my alternative UNIX shell, because I wasn't satisfied with the state of existing
-Go packages for readline (at that time they were either bugger and/or poorly
-maintained, or lacked features I desired). The state of things for readline in
-Go may have changed since then however own package had also matured and grown to
-include many more features that has arisen during the development of my shell.
-So it seemed only fair to give back to the community considering it was other
-peoples readline libraries that allowed me rapidly prototype my shell during
-it's early days of development.
+This project began a few years prior to this git commit history as an API for
+_[murex](https://github.com/lmorg/murex)_, an alternative UNIX shell, because
+I wasn't satisfied with the state of existing Go packages for readline (at that
+time they were either bugger and/or poorly maintained, or lacked features I
+desired). The state of things for readline in Go may have changed since then
+however own package had also matured and grown to include many more features
+that has arisen during the development of _murex_. So it seemed only fair to
+give back to the community considering it was other peoples readline libraries
+that allowed me rapidly prototype _murex_ during it's early stages of
+development.
 
-## Apology
+## `readline` In Action
 
-I get this README isn't very interesting nor helpful at the moment. I promise I
-will embellish this a little more with some useful documentation and fancy GIFs
-(etc) as and when I get time. However for now, I would recommend the following:
+[![asciicast](https://asciinema.org/a/232714.svg)](https://asciinema.org/a/232714)
+
+This is a very rough and ready recording but it does demonstrate a few of the
+features available in `readline`. These features include:
+* hint text (the blue status text below the prompt - however the colour is 
+  configurable)
+* syntax highlighting (albeit there isn't much syntax to highlight in the
+  example)
+* tab-completion in gridded mode (seen when typing `cd`)
+* tab-completion in list view (seen when selecting an process name to `kill`
+  and the process ID was substituted when selected)
+* regex searching through the tab-completion suggestions (seen in both `cd` and
+  `kill` - enabled by pressing `[CTRL+f]`)
+* line editing using `$EDITOR` (`vi` in the example - enabled by pressing
+  `[ESC]` followed by `[v]`)
+* `readline`'s warning before pasting multiple lines of data into the buffer
+* the preview option that's available as part of the aforementioned warning
+* and VIM keys (enabled by pressing `[ESC]`)
 
 ## Example Code
 
