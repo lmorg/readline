@@ -31,3 +31,8 @@ var (
 	EOF = errors.New("EOF")
 )
 ```
+
+## Version Information
+
+`readline`'s version numbers are based on Semantic Versioning. More details can
+be found in the [README.md](README.md#version-information).

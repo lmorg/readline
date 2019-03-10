@@ -1,6 +1,6 @@
-# readline examples
+# lmorg/readline
 
-## 01: Getting Started
+## Examples: 01 - Getting Started
 
 This example shows how to create a console application which uses `readline`
 for input and tab-completion at it's most basic level.

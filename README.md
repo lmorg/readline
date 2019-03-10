@@ -66,16 +66,16 @@ Because the last thing a developer wants is to do is fix breaking changes after
 updating modules, I will make the following guarantees:
 
 * The version string will be based on Semantic Versioning. ie version numbers
-  will be formatted `(major).(minor).(patch)` - for example `2.0.1`
+  will be formatted `v(major).(minor).(patch)` - for example `v2.0.1`
 
-* `major` releases _will_ have breaking changes. Be sure to read CHANGES.md for
-  upgrade instructions
+* `major` releases _will_ have breaking changes. Be sure to read [CHANGES.md](CHANGES.md)
+  for upgrade instructions
 
 * `minor` releases will contain new APIs or introduce new user facing features
   which may affect useability from an end user perspective. However `minor`
   releases will not break backwards compatibility at the source code level and
   nor will it break existing expected user-facing behavior. These changes will
-  be documented in CHANGES.md too
+  be documented in [CHANGES.md](CHANGES.md) too
 
 * `patch` releases will be bug fixes and such like. Where the code has changed
   but both API endpoints and user experience will remain the same (except where
