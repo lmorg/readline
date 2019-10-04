@@ -2,22 +2,30 @@ package readline
 
 import (
 	"bytes"
-	"errors"
 	"os"
 	"regexp"
+	"sync/atomic"
 )
 
 var rxMultiline = regexp.MustCompile(`[\r\n]+`)
 
 // Readline displays the readline prompt.
 // It will return a string (user entered data) or an error.
-func (rl *Instance) Readline() (string, error) {
+func (rl *Instance) Readline() (_ string, err error) {
 	fd := int(os.Stdin.Fd())
 	state, err := MakeRaw(fd)
 	if err != nil {
 		return "", err
 	}
-	defer Restore(fd, state)
+	defer func() {
+		// return an error if Restore fails. However we don't want to return
+		// `nil` if there is no error because there might be a CtrlC or EOF
+		// that needs to be returned
+		r := Restore(fd, state)
+		if r != nil {
+			err = r
+		}
+	}()
 
 	print(rl.prompt)
 
@@ -26,6 +34,7 @@ func (rl *Instance) Readline() (string, error) {
 	rl.pos = 0
 	rl.histPos = rl.History.Len()
 	rl.modeViMode = vimInsert
+	atomic.StoreInt64(&rl.delayedSyntaxCount, 0)
 	rl.resetHintText()
 	rl.resetTabCompletion()
 
@@ -45,17 +54,18 @@ func (rl *Instance) Readline() (string, error) {
 	rl.renderHelpers()
 
 	for {
+		go delayedSyntaxTimer(rl, atomic.LoadInt64(&rl.delayedSyntaxCount))
 		rl.viUndoSkipAppend = false
 		b := make([]byte, 1024)
 		var i int
 
 		if !rl.skipStdinRead {
-			var err error
 			i, err = os.Stdin.Read(b)
 			if err != nil {
 				return "", err
 			}
 		}
+		atomic.AddInt64(&rl.delayedSyntaxCount, 1)
 
 		rl.skipStdinRead = false
 		r := []rune(string(b))
@@ -122,11 +132,11 @@ func (rl *Instance) Readline() (string, error) {
 		switch b[0] {
 		case charCtrlC:
 			rl.clearHelpers()
-			return "", errors.New(ErrCtrlC)
+			return "", CtrlC
 
 		case charEOF:
 			rl.clearHelpers()
-			return "", errors.New(ErrEOF)
+			return "", EOF
 
 		case charCtrlF:
 			if !rl.modeTabCompletion {
