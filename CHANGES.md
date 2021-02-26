@@ -4,10 +4,26 @@
 
 ### 3.0.0
 
-Where do I start? So many changes!
+This release brings a considerable number of new features and bug fixes
+inherited from readline's use in murex (https://github.com/lmorg/murex)
 
-* wrapped lines fixed (where the input line is longer than the terminal width)
+* Wrapped lines finally working (where the input line is longer than the
+  terminal width)
 
+* Delayed tab completion - allows asynchronous updates to the tab completion so
+  slower suggestions do not halt the user experience
+
+* Delayed syntax timer - allows syntax highlighting to run asynchronously for 
+  slower parsers (eg spell checkers)
+
+* Support for GetCursorPos ANSI escape sequence (though I don't have a terminal
+  which supports this to test the code on)
+
+* Better support for wrapped hint text lines
+
+* Fixed bug with $EDITOR error handling in Windows and Plan 9
+
+* Code clean up - fewer writes to the terminal
 
 ### 2.1.0
 
