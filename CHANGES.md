@@ -2,6 +2,13 @@
 
 ## Changes
 
+### 3.0.0
+
+Where do I start? So many changes!
+
+* wrapped lines fixed (where the input line is longer than the terminal width)
+
+
 ### 2.1.0
 
 Error returns from `readline` have been created as error a variable, which is
@@ -31,8 +38,3 @@ var (
 	EOF = errors.New("EOF")
 )
 ```
-
-## Version Information
-
-`readline`'s version numbers are based on Semantic Versioning. More details can
-be found in the [README.md](README.md#version-information).
