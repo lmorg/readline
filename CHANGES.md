@@ -25,6 +25,10 @@ inherited from readline's use in murex (https://github.com/lmorg/murex)
 
 * Code clean up - fewer writes to the terminal
 
+If you just use the exported API end points then your code should still work
+verbatim. However if you are working against a fork or custom patch set then
+considerable more work may be required to merge the changes.
+
 ### 2.1.0
 
 Error returns from `readline` have been created as error a variable, which is
