@@ -2,6 +2,12 @@
 
 ## Changes
 
+### 3.0.1
+
+This is a bug fix release:
+
+* Nil map panic fixed when using dtx.AppendSuggestions()
+
 ### 3.0.0
 
 This release brings a considerable number of new features and bug fixes
