@@ -24,7 +24,7 @@ Then we can create a handler function for `readline` to call which will return
 this slice we've just created:
 
 ```go
-func Tab(line []rune, pos int, ctx readline.DelayedTabContext) (string, []string, map[string]string, readline.TabDisplayType) {
+func Tab(line []rune, pos int, dtx readline.DelayedTabContext) (string, []string, map[string]string, readline.TabDisplayType) {
 	var suggestions []string
 
 	for i := range items {

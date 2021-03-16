@@ -94,7 +94,7 @@ var items = []string{
 }
 
 // Tab is the tab-completion handler for this readline example program
-func Tab(line []rune, pos int, ctx readline.DelayedTabContext) (string, []string, map[string]string, readline.TabDisplayType) {
+func Tab(line []rune, pos int, dtx readline.DelayedTabContext) (string, []string, map[string]string, readline.TabDisplayType) {
 	var suggestions []string
 
 	for i := range items {

@@ -2,6 +2,17 @@
 
 ## Changes
 
+### 3.0.1
+
+This is a bug fix release:
+
+* Nil map panic fixed when using dtx.AppendSuggestions()
+
+* Hint text line proper blanked (this is a fix to a regression bug introduced
+  in version 3.0.0)
+
+* Example 01 updated to reflect API changes in 3.0.0
+
 ### 3.0.0
 
 This release brings a considerable number of new features and bug fixes
