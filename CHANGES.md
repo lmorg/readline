@@ -2,6 +2,12 @@
 
 ## Changes
 
+### 3.0.1
+
+This is a bug fix release:
+
+* Nil map panic fixed when using dtx.AppendSuggestions()
+
 ### 3.0.0
 
 This release brings a considerable number of new features and bug fixes
@@ -24,6 +30,10 @@ inherited from readline's use in murex (https://github.com/lmorg/murex)
 * Fixed bug with $EDITOR error handling in Windows and Plan 9
 
 * Code clean up - fewer writes to the terminal
+
+If you just use the exported API end points then your code should still work
+verbatim. However if you are working against a fork or custom patch set then
+considerable more work may be required to merge the changes.
 
 ### 2.1.0
 
