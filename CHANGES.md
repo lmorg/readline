@@ -2,6 +2,10 @@
 
 ## Changes
 
+### 
+
+* Remove \r when copy/pasting from iTerm
+
 ### 3.0.1
 
 This is a bug fix release:
