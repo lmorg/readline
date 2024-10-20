@@ -57,8 +57,8 @@ func Tab(line []rune, pos int, dtx readline.DelayedTabContext) (string, []string
 	// I agree having a `nil` in a return is ugly. The rational is you can have
 	// one single tab handler that can return either a slice of suggestions or
 	// a map (eg when you want a description with the suggestion) and can do so
-	// with compile type checking intact (ie had I used an interface{} for the
-	// suggestion return). This example doesn't make use of that feature.
+	// with compile type checking intact (ie had I used an any for the suggestion
+    // return). This example doesn't make use of that feature.
 	//
 	// `TabDisplayGrid` is the style to output the tab-completion suggestions.
 	// The grid display is the normal default to use when you don't have

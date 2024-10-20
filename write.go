@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 )
 
-func printf(format string, a ...interface{}) {
+func printf(format string, a ...any) {
 	s := fmt.Sprintf(format, a...)
 	print(s)
 }
