@@ -13,7 +13,16 @@ var rxMultiline = regexp.MustCompile(`[\r\n]+`)
 
 // Readline displays the readline prompt.
 // It will return a string (user entered data) or an error.
-func (rl *Instance) Readline() (_ string, err error) {
+func (rl *Instance) Readline() (string, error) { return rl.readline("") }
+
+// Readline displays the readline prompt primed with a default value.
+// It will return a string (user entered data) or an error.
+// Discussion: https://github.com/lmorg/readline/issues/12
+func (rl *Instance) ReadlineWithDefault(defaultValue string) (string, error) {
+	return rl.readline(defaultValue)
+}
+
+func (rl *Instance) readline(defaultValue string) (_ string, err error) {
 	rl.fdMutex.Lock()
 	rl.Active = true
 
@@ -49,18 +58,18 @@ func (rl *Instance) Readline() (_ string, err error) {
 		rl.fdMutex.Unlock()
 	}()
 
-	rl.forceNewLine()
-	print(rl.prompt)
-
-	rl.line.Set(rl, []rune{})
-	rl.line.SetRunePos(0)
-	rl.lineChange = ""
+	rl.line.Set(rl, []rune(defaultValue))
+	rl.line.SetRunePos(len(defaultValue))
+	rl.lineChange = defaultValue
 	rl.viUndoHistory = []*UnicodeT{rl.line.Duplicate()}
 	rl.histPos = rl.History.Len()
 	rl.modeViMode = vimInsert
 	atomic.StoreInt32(&rl.delayedSyntaxCount, 0)
 	rl.resetHintText()
 	rl.resetTabCompletion()
+
+	rl.forceNewLine()
+	print(rl.prompt + rl.line.String())
 
 	if len(rl.multiSplit) > 0 {
 		r := []rune(rl.multiSplit[0])

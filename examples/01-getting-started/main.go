@@ -35,7 +35,7 @@ func main() {
 		}
 
 		// Print the returned line from readline
-		fmt.Println("Readline: '" + line + "'")
+		fmt.Printf("Readline: '%s'\n", line)
 	}
 }
 
