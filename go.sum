@@ -1,5 +1,7 @@
 github.com/lmorg/murex v0.0.0-20250115225944-b4c429617fd4 h1:JCEM0M0HAN8m1T7GeNjIaJJUyBR/ykRvGR15/aZcK7s=
 github.com/lmorg/murex v0.0.0-20250115225944-b4c429617fd4/go.mod h1:flXYnXpFa6j4keWDv0plQDvy5gfyw0ifSa28IT95cZA=
+github.com/lmorg/readline v1.0.0 h1:llo9Tsphz1T5myTnfek/BszWAJqTGE49S2lvtfrSar8=
+github.com/lmorg/readline v1.0.0/go.mod h1:Nev5yti2InXJ5YtQNnHLvbx4fS5gUijIcgTWe8KtmH0=
 github.com/mattn/go-runewidth v0.0.16 h1:E5ScNMtiwvlvB5paMFdw9p4kSQzbXFikJ5SQO6TULQc=
 github.com/mattn/go-runewidth v0.0.16/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/rivo/uniseg v0.2.0 h1:S1pD9weZBuJdFmowNwbpi7BJ8TNftyUImj/0WQi72jY=
