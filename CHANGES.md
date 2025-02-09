@@ -1,6 +1,51 @@
 # lmorg/readline
 
+v4.0.0 marks a breaking change to the tab completion function.
+
+Earlier versions expected multiple parameters to be returned however from
+v4.0.0 onwards, a pointer to a structure is instead expected:
+```
+type TabCompleterReturnT struct {
+	Prefix       string
+	Suggestions  []string
+	Descriptions map[string]string
+	DisplayType  TabDisplayType
+	HintCache    HintCacheFuncT
+	Preview      PreviewFuncT
+}
+```
+This allows for more configurability and without the cost of copying multiple
+different pieces of data nor future breaking changes whenever additional new
+features are added.
+
 ## Changes
+
+### 4.0.0
+
+* support for wide and zero width unicode characters
+  ([inherited from Murex](https://murex.rocks/changelog/v4.0.html))
+
+* preview modes
+  ([inherited from Murex](https://murex.rocks/user-guide/interactive-shell.html#preview))
+
+* API improvements
+  
+* rewritten event system
+  ([discussion](https://github.com/lmorg/murex/discussions/799))
+
+* vastly improved buffered rendering -- this leads to few rendering glitches
+  and particularly on slower machines and/or terminals
+  
+* added missing vim and emacs keybindings
+  ([full list of keybindings](listhttps://murex.rocks/user-guide/terminal-keys.html))
+
+* additional tests
+
+* fixed glitches on Windows terminals
+  ([discussion](https://github.com/lmorg/murex/issues/630))
+
+* readline command mode
+  ([discussion](https://github.com/lmorg/murex/discussions/905))
 
 ### 3.0.1
 

@@ -3,15 +3,14 @@
 ## Preface
 
 This project began a few years prior to this git commit history as an API for
-_[murex](https://github.com/lmorg/murex)_, an alternative UNIX shell, because
+_[Murex](https://github.com/lmorg/murex)_, an alternative UNIX shell, because
 I wasn't satisfied with the state of existing Go packages for readline (at that
 time they were either bugger and/or poorly maintained, or lacked features I
 desired). The state of things for readline in Go may have changed since then
 however own package had also matured and grown to include many more features
-that has arisen during the development of _murex_. So it seemed only fair to
+that has arisen during the development of Murex. So it seemed only fair to
 give back to the community considering it was other peoples readline libraries
-that allowed me rapidly prototype _murex_ during it's early stages of
-development.
+that allowed me rapidly prototype Murex during it's early stages of development
 
 ## `readline` In Action
 
@@ -50,7 +49,7 @@ func main() {
             return
         }
 
-        fmt.Printf("You just typed: %s\n", line)
+        fmt.Printf("You just typed: '%s'\n", line)
     }
 }
 ```
@@ -90,6 +89,28 @@ updating modules, I will make the following guarantees:
 
 My recommendation is to pin to either the `minor` or `patch` release and I will
 endeavour to keep breaking changes to an absolute minimum.
+
+## Change Log
+
+v4.0.0 marks a breaking change to the tab completion function.
+
+Earlier versions expected multiple parameters to be returned however from
+v4.0.0 onwards, a pointer to a structure is instead expected:
+```
+type TabCompleterReturnT struct {
+	Prefix       string
+	Suggestions  []string
+	Descriptions map[string]string
+	DisplayType  TabDisplayType
+	HintCache    HintCacheFuncT
+	Preview      PreviewFuncT
+}
+```
+This allows for more configurability and without the cost of copying multiple
+different pieces of data nor future breaking changes whenever additional new
+features are added.
+
+The full changelog can be viewed at [CHANGES.md](CHANGES.md)
 
 ## License Information
 
