@@ -1,1 +1,1 @@
-module github.com/lmorg/readline
+module github.com/lmorg/readline/v2
