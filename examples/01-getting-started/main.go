@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/lmorg/readline"
+	"github.com/lmorg/readline/v4"
 )
 
 // This is an example program using readline at a basic level. Please feel free
