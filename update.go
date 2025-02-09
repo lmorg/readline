@@ -1,10 +1,11 @@
 package readline
 
-func (rl *Instance) insert(r []rune) {
+func (rl *Instance) insertStr(r []rune) string {
 	for {
 		// I don't really understand why `0` is creeping in at the end of the
-		// array but it only happens with unicode characters.
-		if len(r) > 1 && r[len(r)-1] == 0 {
+		// array but it only happens with unicode characters. Also have a similar
+		// annoyance with \r when copy/pasting from iTerm.
+		if len(r) > 1 && (r[len(r)-1] == 0 || r[len(r)-1] == '\r') {
 			r = r[:len(r)-1]
 			continue
 		}
@@ -12,54 +13,65 @@ func (rl *Instance) insert(r []rune) {
 	}
 
 	switch {
-	case len(rl.line) == 0:
-		rl.line = r
-	case rl.pos == 0:
-		rl.line = append(r, rl.line...)
-	case rl.pos < len(rl.line):
-		r := append(r, rl.line[rl.pos:]...)
-		rl.line = append(rl.line[:rl.pos], r...)
+	case rl.line.RuneLen() == 0:
+		rl.line.Set(rl, r)
+
+	case rl.line.RunePos() == 0:
+		rl.line.Set(rl, append(r, rl.line.Runes()...))
+
+	case rl.line.RunePos() < rl.line.RuneLen():
+		value := rl.line.Runes()
+		new := append(r, value[rl.line.RunePos():]...)
+		new = append(value[:rl.line.RunePos()], new...)
+		rl.line.Set(rl, new)
+
 	default:
-		rl.line = append(rl.line, r...)
+		rl.line.Set(rl, append(rl.line.Runes(), r...))
 	}
 
-	rl.moveCursorByAdjust(len(r))
-	rl.echo()
+	output := rl.moveCursorByRuneAdjustStr(len(r))
+	output += rl.echoStr()
 
+	// TODO: check me
 	if rl.modeViMode == vimInsert {
-		rl.updateHelpers()
-	}
-}
-
-func (rl *Instance) backspace() {
-	if len(rl.line) == 0 || rl.pos == 0 {
-		return
+		output += rl.updateHelpersStr()
 	}
 
-	moveCursorBackwards(1)
-	rl.pos--
-	rl.delete()
+	return output
 }
 
-func (rl *Instance) delete() {
+func (rl *Instance) backspaceStr() string {
+	if rl.line.RuneLen() == 0 || rl.line.RunePos() == 0 {
+		return ""
+	}
+
+	rl.line.SetRunePos(rl.line.RunePos() - 1)
+	return rl.deleteStr()
+}
+
+func (rl *Instance) deleteStr() string {
+	var output string
 	switch {
-	case len(rl.line) == 0:
-		return
-	case rl.pos == 0:
-		rl.line = rl.line[1:]
-		rl.echo()
-		//moveCursorBackwards(1)
-	case rl.pos > len(rl.line):
-		rl.backspace()
-	case rl.pos == len(rl.line):
-		rl.line = rl.line[:rl.pos]
-		rl.echo()
-		//moveCursorBackwards(1)
+	case rl.line.RuneLen() == 0:
+		return ""
+
+	case rl.line.RunePos() == 0:
+		rl.line.Set(rl, rl.line.Runes()[1:])
+		output = rl.echoStr()
+
+	case rl.line.RunePos() > rl.line.RuneLen():
+		output = rl.backspaceStr()
+		return output
+
+	case rl.line.RunePos() == rl.line.RuneLen():
+		rl.line.Set(rl, rl.line.Runes()[:rl.line.RunePos()])
+		output = rl.echoStr()
+
 	default:
-		rl.line = append(rl.line[:rl.pos], rl.line[rl.pos+1:]...)
-		rl.echo()
-		//moveCursorBackwards(1)
+		rl.line.Set(rl, append(rl.line.Runes()[:rl.line.RunePos()], rl.line.Runes()[rl.line.RunePos()+1:]...))
+		output = rl.echoStr()
 	}
 
-	rl.updateHelpers()
+	output += rl.updateHelpersStr()
+	return output
 }

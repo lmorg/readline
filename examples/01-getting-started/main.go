@@ -40,7 +40,7 @@ func main() {
 }
 
 // items is an example list of possible suggestions to display in readline's
-// tab-completion. For the perpose of this example, I basically just grabbed
+// tab-completion. For the purpose of this example, I basically just grabbed
 // a few entries from some random dictionary of terms.
 var items = []string{
 	"abaya",
@@ -94,8 +94,8 @@ var items = []string{
 }
 
 // Tab is the tab-completion handler for this readline example program
-func Tab(line []rune, pos int, dtx readline.DelayedTabContext) (string, []string, map[string]string, readline.TabDisplayType) {
-	var suggestions []string
+func Tab(line []rune, pos int, dtx readline.DelayedTabContext) *readline.TabCompleterReturnT {
+	ret := new(readline.TabCompleterReturnT)
 
 	for i := range items {
 		// Since in this example we don't want all items to be suggested, only
@@ -120,7 +120,7 @@ func Tab(line []rune, pos int, dtx readline.DelayedTabContext) (string, []string
 			// weird edge case scenarios where this approach might be required
 			// by whoever picks this package up as they might need some more
 			// complex completion logic than what I used this for.
-			suggestions = append(suggestions, items[i][pos:])
+			ret.Suggestions = append(ret.Suggestions, items[i][pos:])
 		}
 	}
 
@@ -133,18 +133,7 @@ func Tab(line []rune, pos int, dtx readline.DelayedTabContext) (string, []string
 	// worth noting that any value you enter here will not be entered on to the
 	// interactive line you're typing when the suggestion is selected. ie this
 	// string is a prefix purely for display purposes.
-	//
-	// `suggestions` is clearly the tab-completion suggestions slice we created
-	// above.
-	//
-	// I agree having a `nil` in a return is ugly. The rational is you can have
-	// one single tab handler that can return either a slice of suggestions or
-	// a map (eg when you want a description with the suggestion) and can do so
-	// with compile type checking intact (ie had I used an any for the suggestion
-	// return). This example doesn't make use of that feature.
-	//
-	// `TabDisplayGrid` is the style to output the tab-completion suggestions.
-	// The grid display is the normal default to use when you don't have
-	// descriptions. I will cover the other display formats in other examples.
-	return string(line[:pos]), suggestions, nil, readline.TabDisplayGrid
+	ret.Prefix = string(line[:pos])
+
+	return ret
 }

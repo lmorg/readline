@@ -1,53 +1,47 @@
 package readline
 
-import "strings"
-
-type undoItem struct {
-	line string
-	pos  int
-}
+import (
+	"strings"
+)
 
 func (rl *Instance) undoAppendHistory() {
-	defer func() { rl.viUndoSkipAppend = false }()
-
 	if rl.viUndoSkipAppend {
+		rl.viUndoSkipAppend = false
 		return
 	}
 
-	rl.viUndoHistory = append(rl.viUndoHistory, undoItem{
-		line: string(rl.line),
-		pos:  rl.pos,
-	})
+	rl.viUndoHistory = append(rl.viUndoHistory, rl.line.Duplicate())
 }
 
-func (rl *Instance) undoLast() {
-	var undo undoItem
+func (rl *Instance) undoLastStr() string {
+	var undo *UnicodeT
 	for {
 		if len(rl.viUndoHistory) == 0 {
-			return
+			return ""
 		}
 		undo = rl.viUndoHistory[len(rl.viUndoHistory)-1]
 		rl.viUndoHistory = rl.viUndoHistory[:len(rl.viUndoHistory)-1]
-		if string(undo.line) != string(rl.line) {
+		if undo.String() != rl.line.String() {
 			break
 		}
 	}
 
-	rl.clearHelpers()
+	output := rl.clearHelpersStr()
 
-	moveCursorBackwards(rl.pos)
-	print(strings.Repeat(" ", len(rl.line)))
-	moveCursorBackwards(len(rl.line))
-	moveCursorForwards(undo.pos)
+	output += moveCursorBackwardsStr(rl.line.CellPos())
+	output += strings.Repeat(" ", rl.line.CellLen())
+	output += moveCursorBackwardsStr(rl.line.CellLen())
+	output += moveCursorForwardsStr(undo.CellPos())
 
-	rl.line = []rune(undo.line)
-	rl.pos = undo.pos
+	rl.line = undo.Duplicate()
 
-	rl.echo()
+	output += rl.echoStr()
 
-	if rl.modeViMode != vimInsert && len(rl.line) > 0 && rl.pos == len(rl.line) {
-		rl.pos--
-		moveCursorBackwards(1)
+	// TODO: check me
+	if rl.modeViMode != vimInsert && rl.line.RuneLen() > 0 && rl.line.RunePos() == rl.line.RuneLen() {
+		rl.line.SetRunePos(rl.line.RuneLen() - 1)
+		output += moveCursorBackwardsStr(1)
 	}
 
+	return output
 }

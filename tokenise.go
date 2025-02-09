@@ -7,6 +7,12 @@ func tokeniseLine(line []rune, linePos int) ([]string, int, int) {
 		return nil, 0, 0
 	}
 
+	var adjust int
+	if linePos >= len(line) {
+		adjust = linePos - len(line) - 1
+		linePos = len(line) - 1
+	}
+
 	var index, pos int
 	var punc bool
 
@@ -44,7 +50,7 @@ func tokeniseLine(line []rune, linePos int) ([]string, int, int) {
 		}
 	}
 
-	return split, index, pos
+	return split, index, pos - adjust
 }
 
 func tokeniseSplitSpaces(line []rune, linePos int) ([]string, int, int) {
@@ -155,14 +161,14 @@ func tokeniseBrackets(line []rune, linePos int) ([]string, int, int) {
 func rTrimWhiteSpace(oldString string) (newString string) {
 	return strings.TrimRight(oldString, " ")
 	// TODO: support tab chars
-	/*defer fmt.Println(">" + oldString + "<" + newString + ">")
-	newString = oldString
-	for len(oldString) > 0 {
-		if newString[len(newString)-1] == ' ' || newString[len(newString)-1] == '\t' {
-			newString = newString[:len(newString)-1]
-		} else {
-			break
+	/*
+		newString = oldString
+		for len(oldString) > 0 {
+			if newString[len(newString)-1] == ' ' || newString[len(newString)-1] == '\t' {
+				newString = newString[:len(newString)-1]
+			} else {
+				break
+			}
 		}
-	}
-	return*/
+		return*/
 }

@@ -1,26 +1,32 @@
 package readline
 
 import (
-	"sort"
+	"fmt"
 	"strconv"
+
+	"github.com/mattn/go-runewidth"
 )
 
 func (rl *Instance) initTabGrid() {
-	var suggestions []string
-	if rl.modeTabFind {
-		suggestions = rl.tfSuggestions
-	} else {
-		suggestions = rl.tcSuggestions
-	}
+	rl.tabMutex.Lock()
+	defer rl.tabMutex.Unlock()
 
-	sort.Strings(suggestions) // I don't like doing this here
+	var suggestions *suggestionsT
+	if rl.modeTabFind {
+		suggestions = newSuggestionsT(rl, rl.tfSuggestions)
+	} else {
+		suggestions = newSuggestionsT(rl, rl.tcSuggestions)
+	}
 
 	rl.tcMaxLength = rl.MinTabItemLength
-	for i := range suggestions {
-		if len(rl.tcPrefix+suggestions[i]) > rl.tcMaxLength {
-			rl.tcMaxLength = len([]rune(rl.tcPrefix + suggestions[i]))
+
+	for i := 0; i < suggestions.Len(); i++ {
+		l := suggestions.ItemLen(i)
+		if l > rl.tcMaxLength {
+			rl.tcMaxLength = l
 		}
 	}
+
 	if rl.tcMaxLength > rl.MaxTabItemLength && rl.MaxTabItemLength > 0 && rl.MaxTabItemLength > rl.MinTabItemLength {
 		rl.tcMaxLength = rl.MaxTabItemLength
 	}
@@ -28,7 +34,6 @@ func (rl *Instance) initTabGrid() {
 		rl.tcMaxLength = 20
 	}
 
-	rl.modeTabCompletion = true
 	rl.tcPosX = 1
 	rl.tcPosY = 1
 	rl.tcMaxX = rl.termWidth / (rl.tcMaxLength + 2)
@@ -40,14 +45,44 @@ func (rl *Instance) initTabGrid() {
 	}
 
 	rl.tcMaxY = rl.MaxTabCompleterRows
+
+	// pre-cache
+	max := rl.tcMaxX * rl.tcMaxY
+	if max > len(rl.tcSuggestions) {
+		max = len(rl.tcSuggestions)
+	}
+	subset := rl.tcSuggestions[:max]
+
+	if rl.tcr.HintCache == nil {
+		return
+	}
+
+	go rl.tabHintCache(subset)
+}
+
+func (rl *Instance) tabHintCache(subset []string) {
+	hints := rl.tcr.HintCache(rl.tcPrefix, subset)
+	if len(hints) != len(subset) {
+		return
+	}
+
+	rl.tabMutex.Lock()
+	for i := range subset {
+		rl.tcDescriptions[subset[i]] = hints[i]
+	}
+	rl.tabMutex.Unlock()
+
 }
 
 func (rl *Instance) moveTabGridHighlight(x, y int) {
-	var suggestions []string
+	rl.tabMutex.Lock()
+	defer rl.tabMutex.Unlock()
+
+	var suggestions *suggestionsT
 	if rl.modeTabFind {
-		suggestions = rl.tfSuggestions
+		suggestions = newSuggestionsT(rl, rl.tfSuggestions)
 	} else {
-		suggestions = rl.tcSuggestions
+		suggestions = newSuggestionsT(rl, rl.tcSuggestions)
 	}
 
 	rl.tcPosX += x
@@ -71,9 +106,9 @@ func (rl *Instance) moveTabGridHighlight(x, y int) {
 		rl.tcPosY = 1
 	}
 
-	if rl.tcPosY == rl.tcUsedY && (rl.tcMaxX*(rl.tcPosY-1))+rl.tcPosX > len(suggestions) {
+	if rl.tcPosY == rl.tcUsedY && (rl.tcMaxX*(rl.tcPosY-1))+rl.tcPosX > suggestions.Len() {
 		if x < 0 {
-			rl.tcPosX = len(suggestions) - (rl.tcMaxX * (rl.tcPosY - 1))
+			rl.tcPosX = suggestions.Len() - (rl.tcMaxX * (rl.tcPosY - 1))
 		}
 
 		if x > 0 {
@@ -91,23 +126,26 @@ func (rl *Instance) moveTabGridHighlight(x, y int) {
 	}
 }
 
-func (rl *Instance) writeTabGrid() {
-	var suggestions []string
-	if rl.modeTabFind {
-		suggestions = rl.tfSuggestions
-	} else {
-		suggestions = rl.tcSuggestions
-	}
+func (rl *Instance) writeTabGridStr() string {
+	rl.tabMutex.Lock()
+	defer rl.tabMutex.Unlock()
 
-	//print("\r" + strings.Repeat("\n", rl.hintY) + seqClearScreenBelow)
+	var suggestions *suggestionsT
+	if rl.modeTabFind {
+		suggestions = newSuggestionsT(rl, rl.tfSuggestions)
+	} else {
+		suggestions = newSuggestionsT(rl, rl.tcSuggestions)
+	}
 
 	iCellWidth := (rl.termWidth / rl.tcMaxX) - 2
 	cellWidth := strconv.Itoa(iCellWidth)
 
 	x := 0
 	y := 1
+	rl.previewItem = ""
+	var output string
 
-	for i := range suggestions {
+	for i := 0; i < suggestions.Len(); i++ {
 		x++
 		if x > rl.tcMaxX {
 			x = 1
@@ -116,20 +154,27 @@ func (rl *Instance) writeTabGrid() {
 				y--
 				break
 			} else {
-				print("\r\n")
+				output += "\r\n"
 			}
 		}
 
 		if x == rl.tcPosX && y == rl.tcPosY {
-			print(seqBgWhite + seqFgBlack)
+			output += seqBgWhite + seqFgBlack
+			rl.previewItem = suggestions.ItemValue(i)
 		}
 
-		caption := cropCaption(rl.tcPrefix+suggestions[i], rl.tcMaxLength, iCellWidth)
+		value := suggestions.ItemValue(i)
+		caption := cropCaption(value, rl.tcMaxLength, iCellWidth)
+		if caption != value {
+			rl.tcDescriptions[suggestions.ItemLookupValue(i)] = value
+		}
 
-		printf(" %-"+cellWidth+"s %s", caption, seqReset)
+		output += fmt.Sprintf(" %-"+cellWidth+"s %s", caption, seqReset)
 	}
 
 	rl.tcUsedY = y
+
+	return output
 }
 
 func cropCaption(caption string, tcMaxLength int, iCellWidth int) string {
@@ -137,17 +182,28 @@ func cropCaption(caption string, tcMaxLength int, iCellWidth int) string {
 	case iCellWidth == 0:
 		// this condition shouldn't ever happen but lets cover it just in case
 		return ""
-	case len(caption) < tcMaxLength:
+
+	case runewidth.StringWidth(caption) != len(caption):
+		// string length != rune width. So lets not do anything too clever
+		//return runewidth.Truncate(caption, iCellWidth, "…")
+		return runeWidthTruncate(caption, iCellWidth)
+
+	case len(caption) < tcMaxLength,
+		len(caption) < 5,
+		len(caption) <= iCellWidth:
 		return caption
-	case len(caption) < 5:
-		return caption
-	case len(caption) <= iCellWidth:
-		return caption
+
 	case len(caption)-iCellWidth+6 < 1:
+		// truncate the end
 		return caption[:iCellWidth-1] + "…"
+
 	case len(caption) > 5+len(caption)-iCellWidth+6:
-		return caption[:4] + "…" + caption[len(caption)-iCellWidth+6:]
+		// truncate long lines in the middle
+		return caption[:5] + "…" + caption[len(caption)-iCellWidth+6:]
+
 	default:
-		return caption[:iCellWidth-1] + "…"
+		// edge case reached. lets truncate the most conservative way we can,
+		// just in case
+		return runewidth.Truncate(caption, iCellWidth, "…")
 	}
 }

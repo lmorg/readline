@@ -1,57 +1,73 @@
 package readline
 
-import "regexp"
+import "strings"
 
-func (rl *Instance) backspaceTabFind() {
+func (rl *Instance) backspaceTabFindStr() string {
 	if len(rl.tfLine) > 0 {
 		rl.tfLine = rl.tfLine[:len(rl.tfLine)-1]
 	}
-	rl.updateTabFind([]rune{})
+	return rl.updateTabFindStr([]rune{})
 }
 
-func (rl *Instance) updateTabFind(r []rune) {
-	rl.tfLine = append(rl.tfLine, r...)
-	rl.hintText = append([]rune("regex find: "), rl.tfLine...)
+func _updateTabFindHelpersStr(rl *Instance) (output string) {
+	rl.tabMutex.Unlock()
+	output = rl.clearHelpersStr()
+	rl.initTabCompletion()
+	output += rl.renderHelpersStr()
+	return
+}
 
-	defer func() {
-		rl.clearHelpers()
-		rl.initTabCompletion()
-		rl.renderHelpers()
-	}()
+func (rl *Instance) updateTabFindStr(r []rune) string {
+	rl.tfLine = append(rl.tfLine, r...)
+
+	rl.tabMutex.Lock()
 
 	if len(rl.tfLine) == 0 {
+		rl.hintText = rFindSearchPart
 		rl.tfSuggestions = append(rl.tcSuggestions, []string{}...)
-		return
+		return _updateTabFindHelpersStr(rl)
 	}
 
-	rx, err := regexp.Compile("(?i)" + string(rl.tfLine))
+	var (
+		find findT
+		err  error
+	)
+
+	find, rl.rFindSearch, rl.rFindCancel, err = newFuzzyFind(string(rl.tfLine))
 	if err != nil {
 		rl.tfSuggestions = []string{err.Error()}
-		return
+		return _updateTabFindHelpersStr(rl)
 	}
+
+	rl.hintText = append(rl.rFindSearch, rl.tfLine...)
+	rl.hintText = append(rl.hintText, []rune(seqReset+seqBlink+"_"+seqReset)...)
 
 	rl.tfSuggestions = make([]string, 0)
 	for i := range rl.tcSuggestions {
-		if rx.MatchString(rl.tcSuggestions[i]) {
+		if find.MatchString(strings.TrimSpace(rl.tcSuggestions[i])) {
 			rl.tfSuggestions = append(rl.tfSuggestions, rl.tcSuggestions[i])
 
-		} else if rl.tcDisplayType == TabDisplayList && rx.MatchString(rl.tcDescriptions[rl.tcSuggestions[i]]) {
+		} else if rl.tcDisplayType == TabDisplayList && find.MatchString(rl.tcDescriptions[rl.tcSuggestions[i]]) {
 			// this is a list so lets also check the descriptions
 			rl.tfSuggestions = append(rl.tfSuggestions, rl.tcSuggestions[i])
 		}
 	}
+
+	return _updateTabFindHelpersStr(rl)
 }
 
-func (rl *Instance) resetTabFind() {
+func (rl *Instance) resetTabFindStr() string {
 	rl.modeTabFind = false
 	rl.tfLine = []rune{}
 	if rl.modeAutoFind {
 		rl.hintText = []rune{}
 	} else {
-		rl.hintText = []rune("Cancelled regex suggestion find.")
+		rl.hintText = rl.rFindCancel
 	}
+	rl.modeAutoFind = false
 
-	rl.clearHelpers()
+	output := rl.clearHelpersStr()
 	rl.initTabCompletion()
-	rl.renderHelpers()
+	output += rl.renderHelpersStr()
+	return output
 }

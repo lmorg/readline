@@ -1,6 +1,7 @@
 package readline
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"strconv"
@@ -25,19 +26,23 @@ func leftMost() []byte {
 var rxRcvCursorPos = regexp.MustCompile("^\x1b([0-9]+);([0-9]+)R$")
 
 func (rl *Instance) getCursorPos() (x int, y int) {
+	if !ForceCrLf {
+		return 0, 0
+	}
+
 	if !rl.EnableGetCursorPos {
 		return -1, -1
 	}
 
 	disable := func() (int, int) {
-		os.Stderr.WriteString("\r\ngetCursorPos() not supported by terminal emulator, disabling....\r\n")
+		printErr("\r\ngetCursorPos() not supported by terminal emulator, disabling....\r\n")
 		rl.EnableGetCursorPos = false
 		return -1, -1
 	}
 
 	print(seqGetCursorPos)
 	b := make([]byte, 64)
-	i, err := os.Stdin.Read(b)
+	i, err := read(b)
 	if err != nil {
 		return disable()
 	}
@@ -60,100 +65,90 @@ func (rl *Instance) getCursorPos() (x int, y int) {
 	return x, y
 }
 
-func moveCursorUp(i int) {
+const (
+	cursorUpf   = "\x1b[%dA"
+	cursorDownf = "\x1b[%dB"
+	cursorForwf = "\x1b[%dC"
+	cursorBackf = "\x1b[%dD"
+)
+
+func moveCursorUpStr(i int) string {
 	if i < 1 {
-		return
+		return ""
 	}
 
-	printf("\x1b[%dA", i)
+	return fmt.Sprintf(cursorUpf, i)
 }
 
-func moveCursorDown(i int) {
+func moveCursorDownStr(i int) string {
 	if i < 1 {
-		return
+		return ""
 	}
 
-	printf("\x1b[%dB", i)
+	return fmt.Sprintf(cursorDownf, i)
 }
 
-func moveCursorForwards(i int) {
+func moveCursorForwardsStr(i int) string {
 	if i < 1 {
-		return
+		return ""
 	}
 
-	printf("\x1b[%dC", i)
+	return fmt.Sprintf(cursorForwf, i)
 }
 
-func moveCursorBackwards(i int) {
+func moveCursorBackwardsStr(i int) string {
 	if i < 1 {
-		return
+		return ""
 	}
 
-	printf("\x1b[%dD", i)
+	return fmt.Sprintf(cursorBackf, i)
 }
 
-func (rl *Instance) moveCursorToStart() {
-	posX, posY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
-
-	moveCursorBackwards(posX - rl.promptLen)
-	moveCursorUp(posY)
+func (rl *Instance) moveCursorToStartStr() string {
+	posX, posY := rl.lineWrapCellPos()
+	return moveCursorBackwardsStr(posX-rl.promptLen) + moveCursorUpStr(posY)
 }
 
-func (rl *Instance) moveCursorFromStartToLinePos() {
-	posX, posY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
-	moveCursorForwards(posX)
-	moveCursorDown(posY)
+func (rl *Instance) moveCursorFromStartToLinePosStr() string {
+	posX, posY := rl.lineWrapCellPos()
+	output := moveCursorForwardsStr(posX)
+	output += moveCursorDownStr(posY)
+	return output
 }
 
-func (rl *Instance) moveCursorFromEndToLinePos() {
-	lineX, lineY := lineWrapPos(rl.promptLen, len(rl.line), rl.termWidth)
-	posX, posY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
-	moveCursorBackwards(lineX - posX)
-	moveCursorUp(lineY - posY)
+func (rl *Instance) moveCursorFromEndToLinePosStr() string {
+	lineX, lineY := rl.lineWrapCellLen()
+	posX, posY := rl.lineWrapCellPos()
+	output := moveCursorBackwardsStr(lineX - posX)
+	output += moveCursorUpStr(lineY - posY)
+	return output
 }
 
-// moveCursorToLinePos should only be used on extreme circumstances because it
-// causes the cursor to jump around quite a bit
-func (rl *Instance) moveCursorFromUnknownToLinePos() {
-	_, lineY := lineWrapPos(rl.promptLen, len(rl.line), rl.termWidth)
-	posX, posY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
-	//moveCursorBackwards(lineX)
-	print("\r")
-	moveCursorForwards(posX)
-	moveCursorUp(lineY - posY)
-}
+func (rl *Instance) moveCursorByRuneAdjustStr(rAdjust int) string {
+	oldX, oldY := rl.lineWrapCellPos()
 
-func (rl *Instance) moveCursorByAdjust(adjust int) {
-	oldX, oldY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
+	rl.line.SetRunePos(rl.line.RunePos() + rAdjust)
 
-	rl.pos += adjust
-
-	if rl.pos < 0 {
-		rl.pos = 0
-	}
-	if rl.pos > len(rl.line) {
-		rl.pos = len(rl.line)
-	}
-
-	if rl.modeViMode != vimInsert && rl.pos == len(rl.line) {
-		rl.pos--
-	}
-
-	newX, newY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
+	newX, newY := rl.lineWrapCellPos()
 
 	y := newY - oldY
+
+	var output string
+
 	switch {
 	case y < 0:
-		moveCursorUp(-y)
+		output += moveCursorUpStr(-y)
 	case y > 0:
-		moveCursorDown(y)
+		output += moveCursorDownStr(y)
 	}
 
 	x := newX - oldX
 	switch {
 	case x < 0:
-		moveCursorBackwards(-x)
+		output += moveCursorBackwardsStr(-x)
 	case x > 0:
-		moveCursorForwards(x)
+		output += moveCursorForwardsStr(x)
 	}
+
+	return output
 }

@@ -2,6 +2,7 @@ package readline
 
 import (
 	"context"
+	"os"
 )
 
 // TabDisplayType defines how the autocomplete suggestions display
@@ -36,34 +37,53 @@ func (rl *Instance) getTabCompletion() {
 	rl.delayedTabContext = DelayedTabContext{rl: rl}
 	rl.delayedTabContext.Context, rl.delayedTabContext.cancel = context.WithCancel(context.Background())
 
-	rl.tcPrefix, rl.tcSuggestions, rl.tcDescriptions, rl.tcDisplayType = rl.TabCompleter(rl.line, rl.pos, rl.delayedTabContext)
-	/*if len(rl.tcSuggestions) == 0 && delayed {
-		return
-	}*/
-	//panic(rl.tcDisplayType)
+	if rl.modeViMode == vimCommand {
+		rl.tcr = rl.vimCommandModeSuggestions()
 
+	} else {
+
+		rl.tcr = rl.TabCompleter(rl.line.Runes(), rl.line.RunePos(), rl.delayedTabContext)
+	}
+	if rl.tcr == nil {
+		return
+	}
+
+	rl.tabMutex.Lock()
+	rl.tcPrefix, rl.tcSuggestions, rl.tcDescriptions, rl.tcDisplayType = rl.tcr.Prefix, rl.tcr.Suggestions, rl.tcr.Descriptions, rl.tcr.DisplayType
 	if len(rl.tcDescriptions) == 0 {
-		// probably not needed, but just in case someone doesn't initialise the
+		// probably not needed, but just in case someone doesn't initialize the
 		// map in their API call.
 		rl.tcDescriptions = make(map[string]string)
 	}
-
-	/*if len(rl.tcSuggestions) == 1 && !rl.modeTabCompletion {
-		if len(rl.tcSuggestions[0]) == 0 || rl.tcSuggestions[0] == " " || rl.tcSuggestions[0] == "\t" {
-			return
-		}
-		rl.insert([]byte(rl.tcSuggestions[0]))
-		return
-	}*/
+	rl.tabMutex.Unlock()
 
 	rl.initTabCompletion()
 }
 
 func (rl *Instance) initTabCompletion() {
+	rl.modeTabCompletion = true
+	rl.autocompleteHeightAdjust()
+
 	if rl.tcDisplayType == TabDisplayGrid {
 		rl.initTabGrid()
 	} else {
 		rl.initTabMap()
+	}
+}
+
+func (rl *Instance) autocompleteHeightAdjust() {
+	_, height, err := GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		height = 25
+	}
+
+	rl.previewAutocompleteHeight(height)
+
+	switch {
+	case height <= 4:
+		rl.MaxTabCompleterRows = 1
+	case height-4 <= rl.MaxTabCompleterRows:
+		rl.MaxTabCompleterRows = height - 4
 	}
 }
 
@@ -75,35 +95,34 @@ func (rl *Instance) moveTabCompletionHighlight(x, y int) {
 	}
 }
 
-func (rl *Instance) writeTabCompletion(resetCursorPos bool) {
+func (rl *Instance) writeTabCompletionStr() string {
 	if !rl.modeTabCompletion {
-		return
+		return ""
 	}
 
-	_, posY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
-	_, lineY := lineWrapPos(rl.promptLen, len(rl.line), rl.termWidth)
-	moveCursorDown(rl.hintY + lineY - posY)
-	print("\r\n" + seqClearScreenBelow)
+	posX, posY := rl.lineWrapCellPos()
+	_, lineY := rl.lineWrapCellLen()
+	output := moveCursorDownStr(rl.hintY + lineY - posY)
+	output += "\r\n" + seqClearScreenBelow
 
 	switch rl.tcDisplayType {
 	case TabDisplayGrid:
-		rl.writeTabGrid()
+		output += rl.writeTabGridStr()
 
 	case TabDisplayMap:
-		rl.writeTabMap()
+		output += rl.writeTabMapStr()
 
 	case TabDisplayList:
-		rl.writeTabMap()
+		output += rl.writeTabMapStr()
 
 	default:
-		rl.writeTabGrid()
+		output += rl.writeTabGridStr()
 	}
 
-	if resetCursorPos {
-		moveCursorUp(rl.hintY + rl.tcUsedY)
-		print("\r")
-		rl.moveCursorFromStartToLinePos()
-	}
+	output += moveCursorUpStr(rl.hintY + rl.tcUsedY + lineY - posY)
+	output += "\r" + moveCursorForwardsStr(posX)
+
+	return output
 }
 
 func (rl *Instance) resetTabCompletion() {
@@ -111,5 +130,6 @@ func (rl *Instance) resetTabCompletion() {
 	rl.tcOffset = 0
 	rl.tcUsedY = 0
 	rl.modeTabFind = false
+	rl.modeAutoFind = false
 	rl.tfLine = []rune{}
 }

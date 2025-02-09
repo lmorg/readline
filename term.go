@@ -1,8 +1,6 @@
 package readline
 
-import (
-	"os"
-)
+import "os"
 
 // GetTermWidth returns the width of Stdout or 80 if the width cannot be established
 func GetTermWidth() (termWidth int) {

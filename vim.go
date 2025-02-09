@@ -3,6 +3,8 @@ package readline
 import (
 	"strconv"
 	"strings"
+
+	"github.com/mattn/go-runewidth"
 )
 
 type viMode int
@@ -13,23 +15,33 @@ const (
 	vimReplaceMany
 	vimDelete
 	vimKeys
+	vimCommand
 )
 
-func (rl *Instance) vi(r rune) {
+func (rl *Instance) vi(r rune) string {
+	// This would normally be a massive anti-pattern. But in this instance
+	// any edge case exceptions are better off ignored and the interactive
+	// prompt kept alive. The worst case scenario is the cursor might
+	// become misaligned but that would resolve itself very quickly under
+	// normal operation.
+	defer recover()
+
+	var output string
 	switch r {
+	case ':':
+		rl.vimCommandModeInit()
+
 	case 'a':
-		if len(rl.line) > 0 {
-			moveCursorForwards(1)
-			rl.pos++
+		if rl.line.CellLen() > 0 {
+			rl.line.SetRunePos(rl.line.RunePos() + 1)
 		}
 		rl.modeViMode = vimInsert
 		rl.viIteration = ""
 		rl.viUndoSkipAppend = true
 
 	case 'A':
-		if len(rl.line) > 0 {
-			moveCursorForwards(len(rl.line) - rl.pos)
-			rl.pos = len(rl.line)
+		if rl.line.RuneLen() > 0 {
+			rl.line.SetRunePos(rl.line.RuneLen() + 1)
 		}
 		rl.modeViMode = vimInsert
 		rl.viIteration = ""
@@ -39,14 +51,14 @@ func (rl *Instance) vi(r rune) {
 		rl.viUndoSkipAppend = true
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.moveCursorByAdjust(rl.viJumpB(tokeniseLine))
+			output += rl.moveCursorByRuneAdjustStr(rl.viJumpB(tokeniseLine))
 		}
 
 	case 'B':
 		rl.viUndoSkipAppend = true
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.moveCursorByAdjust(rl.viJumpB(tokeniseSplitSpaces))
+			output += rl.moveCursorByRuneAdjustStr(rl.viJumpB(tokeniseSplitSpaces))
 		}
 
 	case 'd':
@@ -54,35 +66,37 @@ func (rl *Instance) vi(r rune) {
 		rl.viUndoSkipAppend = true
 
 	case 'D':
-		moveCursorBackwards(rl.pos)
-		print(strings.Repeat(" ", len(rl.line)))
+		output = moveCursorBackwardsStr(rl.line.CellPos())
+		output += strings.Repeat(" ", rl.line.CellLen())
 
-		moveCursorBackwards(len(rl.line) - rl.pos)
-		rl.line = rl.line[:rl.pos]
-		rl.echo()
+		output += moveCursorBackwardsStr(rl.line.CellLen() - rl.line.CellPos())
+		rl.line.Set(rl, rl.line.Runes()[:rl.line.RunePos()])
+		output += rl.echoStr()
 
-		moveCursorBackwards(2)
-		rl.pos--
+		r := rl.line.Runes()[rl.line.RuneLen()-1]
+		output += moveCursorBackwardsStr(1 + runewidth.RuneWidth(r))
+		rl.line.SetRunePos(rl.line.RunePos() - 1)
 		rl.viIteration = ""
 
 	case 'e':
 		rl.viUndoSkipAppend = true
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.moveCursorByAdjust(rl.viJumpE(tokeniseLine))
+			output += rl.moveCursorByRuneAdjustStr(rl.viJumpE(tokeniseLine))
 		}
 
 	case 'E':
 		rl.viUndoSkipAppend = true
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.moveCursorByAdjust(rl.viJumpE(tokeniseSplitSpaces))
+			output += rl.moveCursorByRuneAdjustStr(rl.viJumpE(tokeniseSplitSpaces))
 		}
 
 	case 'h':
-		if rl.pos > 0 {
-			moveCursorBackwards(1)
-			rl.pos--
+		if rl.line.RunePos() > 0 {
+			r := rl.line.Runes()[rl.line.RunePos()-1]
+			output += moveCursorBackwardsStr(runewidth.RuneWidth(r))
+			rl.line.SetRunePos(rl.line.RunePos() - 1)
 		}
 		rl.viUndoSkipAppend = true
 
@@ -95,35 +109,45 @@ func (rl *Instance) vi(r rune) {
 		rl.modeViMode = vimInsert
 		rl.viIteration = ""
 		rl.viUndoSkipAppend = true
-		moveCursorBackwards(rl.pos)
-		rl.pos = 0
+		output += moveCursorBackwardsStr(rl.line.CellPos())
+		rl.line.SetRunePos(0)
 
 	case 'l':
-		if (rl.modeViMode == vimInsert && rl.pos < len(rl.line)) ||
-			(rl.modeViMode != vimInsert && rl.pos < len(rl.line)-1) {
-			moveCursorForwards(1)
-			rl.pos++
+		// TODO: test me
+		if (rl.modeViMode == vimInsert && rl.line.RunePos() < rl.line.RuneLen()) ||
+			(rl.modeViMode != vimInsert && rl.line.RunePos() < rl.line.RuneLen()-1) {
+			r := rl.line.Runes()[rl.line.RunePos()+1]
+			output += moveCursorForwardsStr(runewidth.RuneWidth(r))
+			rl.line.SetRunePos(rl.line.RunePos() + 1)
 		}
 		rl.viUndoSkipAppend = true
 
 	case 'p':
 		// paste after
+		if len(rl.line.Runes()) == 0 {
+			return ""
+		}
+
 		rl.viUndoSkipAppend = true
-		rl.pos++
-		moveCursorForwards(1)
+		w := runewidth.RuneWidth(rl.line.Runes()[rl.line.RunePos()])
+
+		rl.line.SetRunePos(rl.line.RunePos() + 1)
+		output += moveCursorForwardsStr(w)
+
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.insert([]rune(rl.viYankBuffer))
+			output += rl.insertStr([]rune(rl.viYankBuffer))
 		}
-		rl.pos--
-		moveCursorBackwards(1)
+
+		rl.line.SetRunePos(rl.line.RunePos() - 1)
+		output += moveCursorBackwardsStr(w)
 
 	case 'P':
 		// paste before
 		rl.viUndoSkipAppend = true
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.insert([]rune(rl.viYankBuffer))
+			output += rl.insertStr([]rune(rl.viYankBuffer))
 		}
 
 	case 'r':
@@ -137,72 +161,74 @@ func (rl *Instance) vi(r rune) {
 		rl.viUndoSkipAppend = true
 
 	case 'u':
-		rl.undoLast()
+		output = rl.undoLastStr()
 		rl.viUndoSkipAppend = true
 
 	case 'v':
-		rl.clearHelpers()
+		output = rl.clearHelpersStr()
 		var multiline []rune
 		if rl.GetMultiLine == nil {
-			multiline = rl.line
+			multiline = rl.line.Runes()
 		} else {
-			multiline = rl.GetMultiLine(rl.line)
+			multiline = rl.GetMultiLine(rl.line.Runes())
 		}
 
 		new, err := rl.launchEditor(multiline)
 		if err != nil || len(new) == 0 || string(new) == string(multiline) {
 			rl.viUndoSkipAppend = true
-			return
+			return ""
 		}
-		rl.clearLine()
+		rl.clearPrompt()
 		rl.multiline = []byte(string(new))
 
 	case 'w':
 		rl.viUndoSkipAppend = true
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.moveCursorByAdjust(rl.viJumpW(tokeniseLine))
+			output += rl.moveCursorByRuneAdjustStr(rl.viJumpW(tokeniseLine))
 		}
 
 	case 'W':
 		rl.viUndoSkipAppend = true
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.moveCursorByAdjust(rl.viJumpW(tokeniseSplitSpaces))
+			output += rl.moveCursorByRuneAdjustStr(rl.viJumpW(tokeniseSplitSpaces))
 		}
 
 	case 'x':
 		vii := rl.getViIterations()
 		for i := 1; i <= vii; i++ {
-			rl.delete()
+			output += rl.deleteStr()
 		}
-		if rl.pos == len(rl.line) && len(rl.line) > 0 {
-			moveCursorBackwards(1)
-			rl.pos--
+		if rl.line.RunePos() == rl.line.RuneLen() && rl.line.RuneLen() > 0 {
+			///// TODO !!!!!!!!!!
+			r := rl.line.Runes()[rl.line.RunePos()-1]
+			output += moveCursorBackwardsStr(runewidth.RuneWidth(r))
+			rl.line.SetRunePos(rl.line.RunePos() - 1)
 		}
 
 	case 'y', 'Y':
-		rl.viYankBuffer = string(rl.line)
+		rl.viYankBuffer = rl.line.String()
 		rl.viUndoSkipAppend = true
 		//rl.hintText = []rune("-- LINE YANKED --")
 		//rl.renderHelpers()
 
 	case '[':
 		rl.viUndoSkipAppend = true
-		rl.moveCursorByAdjust(rl.viJumpPreviousBrace())
+		output = rl.moveCursorByRuneAdjustStr(rl.viJumpPreviousBrace())
 
 	case ']':
 		rl.viUndoSkipAppend = true
-		rl.moveCursorByAdjust(rl.viJumpNextBrace())
+		output = rl.moveCursorByRuneAdjustStr(rl.viJumpNextBrace())
 
 	case '$':
-		moveCursorForwards(len(rl.line) - rl.pos)
-		rl.pos = len(rl.line)
+		output = moveCursorForwardsStr(rl.line.CellLen() - rl.line.CellPos())
+		rl.line.SetRunePos(rl.line.RuneLen())
 		rl.viUndoSkipAppend = true
 
 	case '%':
 		rl.viUndoSkipAppend = true
-		rl.moveCursorByAdjust(rl.viJumpBracket())
+		output = rl.moveCursorByRuneAdjustStr(rl.viJumpBracket())
 
 	default:
 		if r <= '9' && '0' <= r {
@@ -211,6 +237,8 @@ func (rl *Instance) vi(r rune) {
 		rl.viUndoSkipAppend = true
 
 	}
+
+	return output
 }
 
 func (rl *Instance) getViIterations() int {
@@ -222,7 +250,7 @@ func (rl *Instance) getViIterations() int {
 	return i
 }
 
-func (rl *Instance) viHintMessage() {
+func (rl *Instance) viHintMessageStr() string {
 	switch rl.modeViMode {
 	case vimKeys:
 		rl.hintText = []rune("-- VIM KEYS -- (press `i` to return to normal editing mode)")
@@ -234,16 +262,19 @@ func (rl *Instance) viHintMessage() {
 		rl.hintText = []rune("-- REPLACE --")
 	case vimDelete:
 		rl.hintText = []rune("-- DELETE --")
+	case vimCommand:
+		rl.hintText = rl.vimCommandModeHintText()
 	default:
 		rl.getHintText()
 	}
 
-	rl.clearHelpers()
-	rl.renderHelpers()
+	output := rl.clearHelpersStr()
+	output += rl.renderHelpersStr()
+	return output
 }
 
 func (rl *Instance) viJumpB(tokeniser func([]rune, int) ([]string, int, int)) (adjust int) {
-	split, index, pos := tokeniser(rl.line, rl.pos)
+	split, index, pos := tokeniser(rl.line.Runes(), rl.line.RunePos())
 	switch {
 	case len(split) == 0:
 		return
@@ -258,7 +289,7 @@ func (rl *Instance) viJumpB(tokeniser func([]rune, int) ([]string, int, int)) (a
 }
 
 func (rl *Instance) viJumpE(tokeniser func([]rune, int) ([]string, int, int)) (adjust int) {
-	split, index, pos := tokeniser(rl.line, rl.pos)
+	split, index, pos := tokeniser(rl.line.Runes(), rl.line.RunePos())
 	if len(split) == 0 {
 		return
 	}
@@ -281,12 +312,12 @@ func (rl *Instance) viJumpE(tokeniser func([]rune, int) ([]string, int, int)) (a
 }
 
 func (rl *Instance) viJumpW(tokeniser func([]rune, int) ([]string, int, int)) (adjust int) {
-	split, index, pos := tokeniser(rl.line, rl.pos)
+	split, index, pos := tokeniser(rl.line.Runes(), rl.line.RunePos())
 	switch {
 	case len(split) == 0:
 		return
 	case index+1 == len(split):
-		adjust = len(rl.line) - 1 - rl.pos
+		adjust = rl.line.RuneLen() - 1 - rl.line.RunePos()
 	default:
 		adjust = len(split[index]) - pos
 	}
@@ -294,13 +325,13 @@ func (rl *Instance) viJumpW(tokeniser func([]rune, int) ([]string, int, int)) (a
 }
 
 func (rl *Instance) viJumpPreviousBrace() (adjust int) {
-	if rl.pos == 0 {
+	if rl.line.RunePos() == 0 {
 		return 0
 	}
 
-	for i := rl.pos - 1; i != 0; i-- {
-		if rl.line[i] == '{' {
-			return i - rl.pos
+	for i := rl.line.RunePos() - 1; i != 0; i-- {
+		if rl.line.Runes()[i] == '{' {
+			return i - rl.line.RunePos()
 		}
 	}
 
@@ -308,13 +339,13 @@ func (rl *Instance) viJumpPreviousBrace() (adjust int) {
 }
 
 func (rl *Instance) viJumpNextBrace() (adjust int) {
-	if rl.pos >= len(rl.line)-1 {
+	if rl.line.RunePos() >= rl.line.RuneLen()-1 {
 		return 0
 	}
 
-	for i := rl.pos + 1; i < len(rl.line); i++ {
-		if rl.line[i] == '{' {
-			return i - rl.pos
+	for i := rl.line.RunePos() + 1; i < rl.line.RuneLen(); i++ {
+		if rl.line.Runes()[i] == '{' {
+			return i - rl.line.RunePos()
 		}
 	}
 
@@ -322,7 +353,7 @@ func (rl *Instance) viJumpNextBrace() (adjust int) {
 }
 
 func (rl *Instance) viJumpBracket() (adjust int) {
-	split, index, pos := tokeniseBrackets(rl.line, rl.pos)
+	split, index, pos := tokeniseBrackets(rl.line.Runes(), rl.line.RunePos())
 	switch {
 	case len(split) == 0:
 		return

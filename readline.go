@@ -2,8 +2,10 @@ package readline
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"regexp"
+	"strings"
 	"sync/atomic"
 )
 
@@ -12,80 +14,97 @@ var rxMultiline = regexp.MustCompile(`[\r\n]+`)
 // Readline displays the readline prompt.
 // It will return a string (user entered data) or an error.
 func (rl *Instance) Readline() (_ string, err error) {
-	fd := int(os.Stdin.Fd())
-	state, err := MakeRaw(fd)
+	rl.fdMutex.Lock()
+	rl.Active = true
+
+	state, err := MakeRaw(int(os.Stdin.Fd()))
+	rl.sigwinch()
+
+	rl.fdMutex.Unlock()
+
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to modify fd %d: %s", os.Stdout.Fd(), err.Error())
 	}
+
+	if rl.HintText == nil {
+		rl.HintText = func(_ []rune, _ int) []rune { return nil }
+	}
+
 	defer func() {
+		print(rl.clearPreviewStr())
+
+		rl.fdMutex.Lock()
+
+		rl.closeSigwinch()
+
+		rl.Active = false
 		// return an error if Restore fails. However we don't want to return
 		// `nil` if there is no error because there might be a CtrlC or EOF
 		// that needs to be returned
-		r := Restore(fd, state)
+		r := Restore(int(os.Stdin.Fd()), state)
 		if r != nil {
 			err = r
 		}
+
+		rl.fdMutex.Unlock()
 	}()
 
-	x, _ := rl.getCursorPos()
-	switch x {
-	case -1:
-		print(string(leftMost()))
-	case 0:
-		// do nothing
-	default:
-		print("\r\n")
-	}
+	rl.forceNewLine()
 	print(rl.prompt)
 
-	rl.line = []rune{}
-	rl.viUndoHistory = []undoItem{{line: "", pos: 0}}
-	rl.pos = 0
+	rl.line.Set(rl, []rune{})
+	rl.line.SetRunePos(0)
+	rl.lineChange = ""
+	rl.viUndoHistory = []*UnicodeT{rl.line.Duplicate()}
 	rl.histPos = rl.History.Len()
 	rl.modeViMode = vimInsert
-	atomic.StoreInt64(&rl.delayedSyntaxCount, 0)
+	atomic.StoreInt32(&rl.delayedSyntaxCount, 0)
 	rl.resetHintText()
 	rl.resetTabCompletion()
 
-	if len(rl.multisplit) > 0 {
-		r := []rune(rl.multisplit[0])
-		rl.readlineInput(r)
-		rl.carridgeReturn()
-		if len(rl.multisplit) > 1 {
-			rl.multisplit = rl.multisplit[1:]
+	if len(rl.multiSplit) > 0 {
+		r := []rune(rl.multiSplit[0])
+		print(rl.readlineInputStr(r))
+		print(rl.carriageReturnStr())
+		if len(rl.multiSplit) > 1 {
+			rl.multiSplit = rl.multiSplit[1:]
 		} else {
-			rl.multisplit = []string{}
+			rl.multiSplit = []string{}
 		}
-		return string(rl.line), nil
+		return rl.line.String(), nil
 	}
 
 	rl.termWidth = GetTermWidth()
 	rl.getHintText()
-	rl.renderHelpers()
+	print(rl.renderHelpersStr())
 
+readKey:
 	for {
-		go delayedSyntaxTimer(rl, atomic.LoadInt64(&rl.delayedSyntaxCount))
+		if rl.line.RuneLen() == 0 {
+			// clear the cache when the line is cleared
+			rl.cacheHint.Init(rl)
+			rl.cacheSyntax.Init(rl)
+		}
+
+		go delayedSyntaxTimer(rl, atomic.LoadInt32(&rl.delayedSyntaxCount))
 		rl.viUndoSkipAppend = false
 		b := make([]byte, 1024*1024)
 		var i int
 
 		if !rl.skipStdinRead {
-			i, err = os.Stdin.Read(b)
+			i, err = read(b)
 			if err != nil {
 				return "", err
 			}
 			rl.termWidth = GetTermWidth()
 		}
-		atomic.AddInt64(&rl.delayedSyntaxCount, 1)
+		atomic.AddInt32(&rl.delayedSyntaxCount, 1)
 
 		rl.skipStdinRead = false
 		r := []rune(string(b))
 
 		if isMultiline(r[:i]) || len(rl.multiline) > 0 {
 			rl.multiline = append(rl.multiline, b[:i]...)
-			if i == len(b) {
-				continue
-			}
 
 			if !rl.allowMultiline(rl.multiline) {
 				rl.multiline = []byte{}
@@ -93,343 +112,497 @@ func (rl *Instance) Readline() (_ string, err error) {
 			}
 
 			s := string(rl.multiline)
-			rl.multisplit = rxMultiline.Split(s, -1)
+			rl.multiSplit = rxMultiline.Split(s, -1)
 
-			r = []rune(rl.multisplit[0])
+			r = []rune(rl.multiSplit[0])
 			rl.modeViMode = vimInsert
-			rl.readlineInput(r)
-			rl.carridgeReturn()
+			print(rl.readlineInputStr(r))
+			print(rl.carriageReturnStr())
 			rl.multiline = []byte{}
-			if len(rl.multisplit) > 1 {
-				rl.multisplit = rl.multisplit[1:]
+			if len(rl.multiSplit) > 1 {
+				rl.multiSplit = rl.multiSplit[1:]
 			} else {
-				rl.multisplit = []string{}
+				rl.multiSplit = []string{}
 			}
-			return string(rl.line), nil
+			return rl.line.String(), nil
 		}
 
-		s := string(r[:i])
-		if rl.evtKeyPress[s] != nil {
-			//rl.clearHelpers() // unessisary clear?
+		keyPress := string(r[:i])
+		if rl.evtKeyPress[keyPress] != nil {
+			var id int
+			evtState := rl.newEventState(keyPress)
+		nextEvent:
+			print(rl.clearHelpersStr())
+			print("\r" + seqClearLine)
+			evt := rl.evtKeyPress[keyPress](id, evtState)
+			rl.forceNewLine()
 
-			ret := rl.evtKeyPress[s](s, rl.line, rl.pos)
+			rl.line.Set(rl, evt.SetLine)
+			rl.line.SetRunePos(evt.SetPos)
 
-			rl.clearLine()
-			rl.line = append(ret.NewLine, []rune{}...)
-			rl.echo()
-			rl.pos = ret.NewPos
-
-			if ret.ClearHelpers {
-				rl.resetHelpers()
-			} else {
-				rl.updateHelpers()
-				rl.renderHelpers()
+			for _, function := range evt.Actions {
+				function(rl)
 			}
 
-			if len(ret.HintText) > 0 {
-				rl.hintText = ret.HintText
-				rl.clearHelpers()
-				rl.renderHelpers()
+			if len(evt.Actions) == 0 {
+				output := rl.echoStr()
+				output += rl.renderHelpersStr()
+				print(output)
 			}
-			if !ret.ForwardKey {
-				continue
+
+			if len(evt.HintText) > 0 {
+				rl.ForceHintTextUpdate(string(evt.HintText))
 			}
-			if ret.CloseReadline {
-				rl.clearHelpers()
-				return string(rl.line), nil
+
+			switch {
+			case evt.MoreEvents && evt.Continue:
+				id++
+				goto nextEvent
+
+			case evt.Continue:
+				break
+
+			default:
+				goto readKey
 			}
+		}
+
+		i = removeNonPrintableChars(b[:i])
+
+		// Used for syntax completion
+		rl.lineChange = string(b[:i])
+
+		// Slow or invisible tab completions shouldn't lock up cursor movement
+		rl.tabMutex.Lock()
+		lenTcS := len(rl.tcSuggestions)
+		rl.tabMutex.Unlock()
+		if rl.modeTabCompletion && lenTcS == 0 {
+			if rl.delayedTabContext.cancel != nil {
+				rl.delayedTabContext.cancel()
+			}
+			rl.modeTabCompletion = false
+			print(rl.updateHelpersStr())
 		}
 
 		switch b[0] {
+		case charCtrlA:
+			HkFnCursorMoveToStartOfLine(rl)
+
 		case charCtrlC:
-			rl.clearHelpers()
-			return "", CtrlC
+			output := rl.clearPreviewStr()
+			output += rl.clearHelpersStr()
+			print(output)
+			return "", ErrCtrlC
 
 		case charEOF:
-			rl.clearHelpers()
-			return "", EOF
+			if rl.line.RuneLen() == 0 {
+				output := rl.clearPreviewStr()
+				output += rl.clearHelpersStr()
+				print(output)
+				return "", ErrEOF
+			}
+
+		case charCtrlE:
+			HkFnCursorMoveToEndOfLine(rl)
 
 		case charCtrlF:
-			if !rl.modeTabCompletion {
-				rl.modeAutoFind = true
-				rl.getTabCompletion()
-			}
+			HkFnModeFuzzyFind(rl)
 
-			rl.modeTabFind = true
-			rl.updateTabFind([]rune{})
-			rl.viUndoSkipAppend = true
+		case charCtrlG:
+			HkFnCancelAction(rl)
+
+		case charCtrlK:
+			HkFnClearAfterCursor(rl)
+
+		case charCtrlL:
+			HkFnClearScreen(rl)
 
 		case charCtrlR:
-			rl.modeAutoFind = true
-			rl.tcOffset = 0
-			rl.modeTabCompletion = true
-			rl.tcDisplayType = TabDisplayMap
-			rl.tcSuggestions, rl.tcDescriptions = rl.autocompleteHistory()
-			rl.initTabCompletion()
-
-			rl.modeTabFind = true
-			rl.updateTabFind([]rune{})
-			rl.viUndoSkipAppend = true
+			HkFnModeSearchHistory(rl)
 
 		case charCtrlU:
-			rl.clearLine()
-			rl.resetHelpers()
+			HkFnClearLine(rl)
+
+		case charCtrlZ:
+			HkFnUndo(rl)
 
 		case charTab:
-			if rl.modeTabCompletion {
-				rl.moveTabCompletionHighlight(1, 0)
-			} else {
-				rl.getTabCompletion()
-			}
-
-			rl.renderHelpers()
-			rl.viUndoSkipAppend = true
+			HkFnModeAutocomplete(rl)
 
 		case '\r':
 			fallthrough
 		case '\n':
-			var suggestions []string
-			if rl.modeTabFind {
-				suggestions = rl.tfSuggestions
-			} else {
-				suggestions = rl.tcSuggestions
-			}
-
-			if rl.modeTabCompletion && len(suggestions) > 0 {
-				cell := (rl.tcMaxX * (rl.tcPosY - 1)) + rl.tcOffset + rl.tcPosX - 1
-				rl.clearHelpers()
-				rl.resetTabCompletion()
-				rl.renderHelpers()
-				rl.insert([]rune(suggestions[cell]))
+			if rl.modeViMode == vimCommand {
+				print(rl.vimCommandModeReturnStr())
 				continue
 			}
-			rl.carridgeReturn()
-			return string(rl.line), nil
+
+			var output string
+			rl.tabMutex.Lock()
+			var suggestions *suggestionsT
+			if rl.modeTabFind {
+				suggestions = newSuggestionsT(rl, rl.tfSuggestions)
+			} else {
+				suggestions = newSuggestionsT(rl, rl.tcSuggestions)
+			}
+			rl.tabMutex.Unlock()
+
+			switch {
+			case rl.previewMode == previewModeOpen:
+				output += rl.clearPreviewStr()
+				output += rl.clearHelpersStr()
+				print(output)
+				continue
+			case rl.previewMode == previewModeAutocomplete:
+				rl.previewMode = previewModeOpen
+				if !rl.modeTabCompletion {
+					output += rl.clearPreviewStr()
+					output += rl.clearHelpersStr()
+					print(output)
+					continue
+				}
+			}
+
+			if rl.modeTabCompletion || len(rl.tfLine) != 0 /*&& len(suggestions) > 0*/ {
+				tfLine := rl.tfLine
+				cell := (rl.tcMaxX * (rl.tcPosY - 1)) + rl.tcOffset + rl.tcPosX - 1
+				output += rl.clearHelpersStr()
+				rl.resetTabCompletion()
+				output += rl.renderHelpersStr()
+				if suggestions.Len() > 0 {
+					prefix, line := suggestions.ItemCompletionReturn(cell)
+					if len(prefix) == 0 && len(rl.tcPrefix) > 0 {
+						l := -len(rl.tcPrefix)
+						if l == -1 && rl.line.RuneLen() > 0 && rl.line.RunePos() == rl.line.RuneLen() {
+							rl.line.Set(rl, rl.line.Runes()[:rl.line.RuneLen()-1])
+						} else {
+							output += rl.viDeleteByAdjustStr(l)
+						}
+					}
+					output += rl.insertStr([]rune(line))
+				} else {
+					output += rl.insertStr(tfLine)
+				}
+				print(output)
+				continue
+			}
+			output += rl.carriageReturnStr()
+			print(output)
+			return rl.line.String(), nil
 
 		case charBackspace, charBackspace2:
-			if rl.modeTabFind {
-				rl.backspaceTabFind()
+			switch {
+			case rl.modeTabFind:
+				print(rl.backspaceTabFindStr())
 				rl.viUndoSkipAppend = true
-			} else {
-				rl.backspace()
-				rl.renderHelpers()
+			case rl.modeViMode == vimCommand:
+				print(rl.vimCommandModeBackspaceStr())
+			default:
+				print(rl.backspaceStr())
 			}
 
 		case charEscape:
-			rl.escapeSeq(r[:i])
+			print(rl.escapeSeq(r[:i]))
 
 		default:
 			if rl.modeTabFind {
-				rl.updateTabFind(r[:i])
+				print(rl.updateTabFindStr(r[:i]))
 				rl.viUndoSkipAppend = true
 			} else {
-				rl.readlineInput(r[:i])
+				print(rl.readlineInputStr(r[:i]))
 				if len(rl.multiline) > 0 && rl.modeViMode == vimKeys {
 					rl.skipStdinRead = true
 				}
 			}
 		}
 
-		//if !rl.viUndoSkipAppend {
-		//	rl.viUndoHistory = append(rl.viUndoHistory, rl.line)
-		//}
 		rl.undoAppendHistory()
 	}
 }
 
-func (rl *Instance) escapeSeq(r []rune) {
+func (rl *Instance) escapeSeq(r []rune) string {
+	var output string
 	switch string(r) {
-	case string([]rune{charEscape}):
-		switch {
-		case rl.modeAutoFind:
-			rl.resetTabFind()
-			rl.clearHelpers()
-			rl.resetTabCompletion()
-			rl.renderHelpers()
-
-		case rl.modeTabFind:
-			rl.resetTabFind()
-
-		case rl.modeTabCompletion:
-			rl.clearHelpers()
-			rl.resetTabCompletion()
-			rl.renderHelpers()
-
-		default:
-			if rl.pos == len(rl.line) && len(rl.line) > 0 {
-				rl.pos--
-				moveCursorBackwards(1)
-			}
-			rl.modeViMode = vimKeys
-			rl.viIteration = ""
-			//rl.viHintVimKeys()
-			rl.viHintMessage()
-		}
-		rl.viUndoSkipAppend = true
+	case seqEscape:
+		HkFnCancelAction(rl)
 
 	case seqDelete:
 		if rl.modeTabFind {
-			rl.backspaceTabFind()
+			output += rl.backspaceTabFindStr()
 		} else {
-			rl.delete()
+			output += rl.deleteStr()
 		}
 
 	case seqUp:
+		rl.viUndoSkipAppend = true
+
 		if rl.modeTabCompletion {
 			rl.moveTabCompletionHighlight(0, -1)
-			rl.renderHelpers()
-			return
+			output += rl.renderHelpersStr()
+			return output
 		}
 
 		// are we midway through a long line that wrap multiple terminal lines?
-		_, posY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
+		posX, posY := rl.lineWrapCellPos()
 		if posY > 0 {
-			rl.moveCursorByAdjust(-rl.termWidth + rl.promptLen)
-			return
+			pos := rl.line.CellPos() - rl.termWidth + rl.promptLen
+			rl.line.SetCellPos(pos)
+
+			newX, _ := rl.lineWrapCellPos()
+			offset := newX - posX
+			switch {
+			case offset > 0:
+				output += moveCursorForwardsStr(offset)
+			case offset < 0:
+				output += moveCursorBackwardsStr(offset * -1)
+			}
+
+			output += moveCursorUpStr(1)
+			return output
 		}
+
 		rl.walkHistory(-1)
 
 	case seqDown:
+		rl.viUndoSkipAppend = true
+
 		if rl.modeTabCompletion {
 			rl.moveTabCompletionHighlight(0, 1)
-			rl.renderHelpers()
-			return
+			output += rl.renderHelpersStr()
+			return output
 		}
 
 		// are we midway through a long line that wrap multiple terminal lines?
-		_, posY := lineWrapPos(rl.promptLen, rl.pos, rl.termWidth)
-		_, lineY := lineWrapPos(rl.promptLen, len(rl.line), rl.termWidth)
+		posX, posY := rl.lineWrapCellPos()
+		_, lineY := rl.lineWrapCellLen()
 		if posY < lineY {
-			rl.moveCursorByAdjust(rl.termWidth - rl.promptLen)
-			return
+			pos := rl.line.CellPos() + rl.termWidth - rl.promptLen
+			rl.line.SetCellPos(pos)
+
+			newX, _ := rl.lineWrapCellPos()
+			offset := newX - posX
+			switch {
+			case offset > 0:
+				output += moveCursorForwardsStr(offset)
+			case offset < 0:
+				output += moveCursorBackwardsStr(offset * -1)
+			}
+
+			output += moveCursorDownStr(1)
+			return output
 		}
+
 		rl.walkHistory(1)
 
 	case seqBackwards:
 		if rl.modeTabCompletion {
 			rl.moveTabCompletionHighlight(-1, 0)
-			rl.renderHelpers()
-			return
+			output += rl.renderHelpersStr()
+			return output
 		}
 
-		if rl.pos > 0 {
-			rl.moveCursorByAdjust(-1)
-		}
+		output += rl.moveCursorByRuneAdjustStr(-1)
 		rl.viUndoSkipAppend = true
 
 	case seqForwards:
 		if rl.modeTabCompletion {
 			rl.moveTabCompletionHighlight(1, 0)
-			rl.renderHelpers()
-			return
+			output += rl.renderHelpersStr()
+			return output
 		}
 
-		if (rl.modeViMode == vimInsert && rl.pos < len(rl.line)) ||
-			(rl.modeViMode != vimInsert && rl.pos < len(rl.line)-1) {
-			rl.moveCursorByAdjust(1)
-		}
+		//if (rl.modeViMode == vimInsert && rl.line.RunePos() < rl.line.RuneLen()) ||
+		//	(rl.modeViMode != vimInsert && rl.line.RunePos() < rl.line.RuneLen()-1) {
+		output += rl.moveCursorByRuneAdjustStr(1)
+		//}
 		rl.viUndoSkipAppend = true
 
 	case seqHome, seqHomeSc:
-		if rl.modeTabCompletion {
-			return
-		}
+		switch {
+		case rl.previewMode != previewModeClosed:
+			output += rl.previewPreviousSectionStr()
+			return output
 
-		rl.moveCursorByAdjust(-rl.pos)
-		rl.viUndoSkipAppend = true
+		case rl.modeTabCompletion:
+			return output
+
+		default:
+			output += rl.moveCursorByRuneAdjustStr(-rl.line.RunePos())
+			rl.viUndoSkipAppend = true
+		}
 
 	case seqEnd, seqEndSc:
-		if rl.modeTabCompletion {
-			return
-		}
+		switch {
+		case rl.previewMode != previewModeClosed:
+			output += rl.previewNextSectionStr()
+			return output
 
-		rl.moveCursorByAdjust(len(rl.line) - rl.pos)
-		rl.viUndoSkipAppend = true
+		case rl.modeTabCompletion:
+			return output
+
+		default:
+			output += rl.moveCursorByRuneAdjustStr(rl.line.RuneLen() - rl.line.RunePos())
+			rl.viUndoSkipAppend = true
+		}
 
 	case seqShiftTab:
 		if rl.modeTabCompletion {
 			rl.moveTabCompletionHighlight(-1, 0)
-			rl.renderHelpers()
-			return
+			output += rl.renderHelpersStr()
+			return output
 		}
 
+	case seqPageUp, seqOptUp, seqCtrlUp:
+		output += rl.previewPageUpStr()
+		return output
+
+	case seqPageDown, seqOptDown, seqCtrlDown:
+		output += rl.previewPageDownStr()
+		return output
+
+	case seqF1, seqF1VT100:
+		HkFnModePreviewToggle(rl)
+		return output
+
+	case seqF9:
+		HkFnModePreviewLine(rl)
+		return output
+
+	case seqAltF, seqOptRight, seqCtrlRight:
+		switch {
+		case rl.previewMode != previewModeClosed:
+			output += rl.previewNextSectionStr()
+			return output
+
+		default:
+			HkFnCursorJumpForwards(rl)
+		}
+
+	case seqAltB, seqOptLeft, seqCtrlLeft:
+		switch {
+		case rl.previewMode != previewModeClosed:
+			output += rl.previewPreviousSectionStr()
+			return output
+
+		default:
+			HkFnCursorJumpBackwards(rl)
+		}
+
+	case seqShiftF1:
+		HkFnRecallWord1(rl)
+	case seqShiftF2:
+		HkFnRecallWord2(rl)
+	case seqShiftF3:
+		HkFnRecallWord3(rl)
+	case seqShiftF4:
+		HkFnRecallWord4(rl)
+	case seqShiftF5:
+		HkFnRecallWord5(rl)
+	case seqShiftF6:
+		HkFnRecallWord6(rl)
+	case seqShiftF7:
+		HkFnRecallWord7(rl)
+	case seqShiftF8:
+		HkFnRecallWord8(rl)
+	case seqShiftF9:
+		HkFnRecallWord9(rl)
+	case seqShiftF10:
+		HkFnRecallWord10(rl)
+	case seqShiftF11:
+		HkFnRecallWord11(rl)
+	case seqShiftF12:
+		HkFnRecallWord12(rl)
+
 	default:
-		if rl.modeTabFind {
-			return
+		if rl.modeTabFind /*|| rl.modeAutoFind*/ {
+			//rl.modeTabFind = false
+			//rl.modeAutoFind = false
+			return output
 		}
 		// alt+numeric append / delete
 		if len(r) == 2 && '1' <= r[1] && r[1] <= '9' {
 			if rl.modeViMode == vimDelete {
-				rl.vimDelete(r)
-				return
+				output += rl.vimDeleteStr(r)
+				return output
 			}
 
-			line, err := rl.History.GetLine(rl.History.Len() - 1)
-			if err != nil {
-				return
-			}
-
-			tokens, _, _ := tokeniseSplitSpaces([]rune(line), 0)
-			pos := int(r[1]) - 48 // convert ASCII to integer
-			if pos > len(tokens) {
-				return
-			}
-			rl.insert([]rune(tokens[pos-1]))
 		} else {
 			rl.viUndoSkipAppend = true
 		}
 	}
+
+	return output
 }
 
 // readlineInput is an unexported function used to determine what mode of text
 // entry readline is currently configured for and then update the line entries
 // accordingly.
-func (rl *Instance) readlineInput(r []rune) {
+func (rl *Instance) readlineInputStr(r []rune) string {
+	if len(r) == 0 {
+		return ""
+	}
+
+	var output string
+
 	switch rl.modeViMode {
 	case vimKeys:
-		rl.vi(r[0])
-		rl.viHintMessage()
+		output += rl.vi(r[0])
+		output += rl.viHintMessageStr()
 
 	case vimDelete:
-		rl.vimDelete(r)
-		rl.viHintMessage()
+		output += rl.vimDeleteStr(r)
+		output += rl.viHintMessageStr()
 
 	case vimReplaceOnce:
 		rl.modeViMode = vimKeys
-		rl.delete()
-		rl.insert([]rune{r[0]})
-		rl.viHintMessage()
+		output += rl.deleteStr()
+		output += rl.insertStr([]rune{r[0]})
+		output += rl.viHintMessageStr()
 
 	case vimReplaceMany:
 		for _, char := range r {
-			rl.delete()
-			rl.insert([]rune{char})
+			output += rl.deleteStr()
+			output += rl.insertStr([]rune{char})
 		}
-		rl.viHintMessage()
+		output += rl.viHintMessageStr()
+
+	case vimCommand:
+		output += rl.vimCommandModeInput(r)
+		output += rl.viHintMessageStr()
 
 	default:
-		rl.insert(r)
+		output += rl.insertStr(r)
 	}
+
+	return output
 }
 
 // SetPrompt will define the readline prompt string.
 // It also calculates the runes in the string as well as any non-printable
 // escape codes.
 func (rl *Instance) SetPrompt(s string) {
+	s = strings.ReplaceAll(s, "\r", "")
+	s = strings.ReplaceAll(s, "\t", "    ")
+	split := strings.Split(s, "\n")
+	if len(split) > 1 {
+		print(strings.Join(split[:len(split)-1], "\r\n") + "\r\n")
+		s = split[len(split)-1]
+	}
 	rl.prompt = s
 	rl.promptLen = strLen(s)
 }
 
-func (rl *Instance) carridgeReturn() {
-	rl.clearHelpers()
-	print("\r\n")
+func (rl *Instance) carriageReturnStr() string {
+	output := rl.clearHelpersStr()
+	output += "\r\n"
 	if rl.HistoryAutoWrite {
 		var err error
-		rl.histPos, err = rl.History.Write(string(rl.line))
+		rl.histPos, err = rl.History.Write(rl.line.String())
 		if err != nil {
-			print(err.Error() + "\r\n")
+			output += err.Error() + "\r\n"
 		}
 	}
+	return output
 }
 
 func isMultiline(r []rune) bool {
@@ -442,16 +615,22 @@ func isMultiline(r []rune) bool {
 }
 
 func (rl *Instance) allowMultiline(data []byte) bool {
-	rl.clearHelpers()
+	print(rl.clearHelpersStr())
 	printf("\r\nWARNING: %d bytes of multiline data was dumped into the shell!", len(data))
 	for {
 		print("\r\nDo you wish to proceed (yes|no|preview)? [y/n/p] ")
 
-		b := make([]byte, 1024)
+		b := make([]byte, 1024*1024)
 
-		i, err := os.Stdin.Read(b)
+		i, err := read(b)
 		if err != nil {
 			return false
+		}
+
+		if i > 1 {
+			rl.multiline = append(rl.multiline, b[:i]...)
+			print(moveCursorUpStr(2))
+			return rl.allowMultiline(append(data, b[:i]...))
 		}
 
 		s := string(b[:i])
@@ -476,5 +655,17 @@ func (rl *Instance) allowMultiline(data []byte) bool {
 		default:
 			print("\r\nInvalid response. Please answer `y` (yes), `n` (no) or `p` (preview)")
 		}
+	}
+}
+
+func (rl *Instance) forceNewLine() {
+	x, _ := rl.getCursorPos()
+	switch x {
+	case -1:
+		print(string(leftMost()))
+	case 0:
+		// do nothing
+	default:
+		print("\r\n")
 	}
 }

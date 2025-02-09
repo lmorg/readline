@@ -1,50 +1,54 @@
 package readline
 
-import (
-	"strconv"
-)
+import "fmt"
 
 func (rl *Instance) initTabMap() {
-	var suggestions []string
+	rl.tabMutex.Lock()
+	defer rl.tabMutex.Unlock()
+
+	var suggestions *suggestionsT
 	if rl.modeTabFind {
-		suggestions = rl.tfSuggestions
+		suggestions = newSuggestionsT(rl, rl.tfSuggestions)
 	} else {
-		suggestions = rl.tcSuggestions
+		suggestions = newSuggestionsT(rl, rl.tcSuggestions)
 	}
 
 	rl.tcMaxLength = 1
-	for i := range suggestions {
+	//for i := range suggestions {
+	for i := 0; i < suggestions.Len(); i++ {
 		if rl.tcDisplayType == TabDisplayList {
-			if len(rl.tcPrefix+suggestions[i]) > rl.tcMaxLength {
-				rl.tcMaxLength = len([]rune(rl.tcPrefix + suggestions[i]))
+			if suggestions.ItemLen(i) > rl.tcMaxLength {
+				rl.tcMaxLength = suggestions.ItemLen(i)
 			}
 
 		} else {
-			if len(rl.tcDescriptions[suggestions[i]]) > rl.tcMaxLength {
-				rl.tcMaxLength = len(rl.tcDescriptions[suggestions[i]])
+			if len(rl.tcDescriptions[suggestions.ItemLookupValue(i)]) > rl.tcMaxLength {
+				rl.tcMaxLength = len(rl.tcDescriptions[suggestions.ItemLookupValue(i)])
 			}
 		}
 	}
 
-	rl.modeTabCompletion = true
 	rl.tcPosX = 1
 	rl.tcPosY = 1
 	rl.tcOffset = 0
 	rl.tcMaxX = 1
 
-	if len(suggestions) > rl.MaxTabCompleterRows {
+	if suggestions.Len() > rl.MaxTabCompleterRows {
 		rl.tcMaxY = rl.MaxTabCompleterRows
 	} else {
-		rl.tcMaxY = len(suggestions)
+		rl.tcMaxY = suggestions.Len()
 	}
 }
 
 func (rl *Instance) moveTabMapHighlight(x, y int) {
-	var suggestions []string
+	rl.tabMutex.Lock()
+	defer rl.tabMutex.Unlock()
+
+	var suggestions *suggestionsT
 	if rl.modeTabFind {
-		suggestions = rl.tfSuggestions
+		suggestions = newSuggestionsT(rl, rl.tfSuggestions)
 	} else {
-		suggestions = rl.tcSuggestions
+		suggestions = newSuggestionsT(rl, rl.tcSuggestions)
 	}
 
 	rl.tcPosY += x
@@ -60,32 +64,35 @@ func (rl *Instance) moveTabMapHighlight(x, y int) {
 		rl.tcOffset++
 	}
 
-	if rl.tcOffset+rl.tcPosY < 1 && len(suggestions) > 0 {
+	if rl.tcOffset+rl.tcPosY < 1 && suggestions.Len() > 0 {
 		rl.tcPosY = rl.tcMaxY
-		rl.tcOffset = len(suggestions) - rl.tcMaxY
+		rl.tcOffset = suggestions.Len() - rl.tcMaxY
 	}
 
 	if rl.tcOffset < 0 {
 		rl.tcOffset = 0
 	}
 
-	if rl.tcOffset+rl.tcPosY > len(suggestions) {
+	if rl.tcOffset+rl.tcPosY > suggestions.Len() {
 		rl.tcPosY = 1
 		rl.tcOffset = 0
 	}
 }
 
-func (rl *Instance) writeTabMap() {
-	var suggestions []string
+func (rl *Instance) writeTabMapStr() string {
+	rl.tabMutex.Lock()
+	defer rl.tabMutex.Unlock()
+
+	var suggestions *suggestionsT
 	if rl.modeTabFind {
-		suggestions = rl.tfSuggestions
+		suggestions = newSuggestionsT(rl, rl.tfSuggestions)
 	} else {
-		suggestions = rl.tcSuggestions
+		suggestions = newSuggestionsT(rl, rl.tcSuggestions)
 	}
 
 	if rl.termWidth < 10 {
 		// terminal too small. Probably better we do nothing instead of crash
-		return
+		return ""
 	}
 
 	maxLength := rl.tcMaxLength
@@ -94,63 +101,59 @@ func (rl *Instance) writeTabMap() {
 	}
 	maxDescWidth := rl.termWidth - maxLength - 4
 
-	cellWidth := strconv.Itoa(maxLength)
-	itemWidth := strconv.Itoa(maxDescWidth)
-
 	y := 0
+	rl.previewItem = ""
 
-	//print("\r" + strings.Repeat("\n", rl.hintY) + seqClearScreenBelow)
-	moveCursorUp(1) // bit of a kludge. Really should find where the code is "\n"ing
+	// bit of a kludge. Really should find where the code is "\n"ing
+	output := moveCursorUpStr(1)
 
-	highlight := func(y int) string {
-		if y == rl.tcPosY {
-			return seqBgWhite + seqFgBlack
-		}
-		return ""
-	}
+	isTabDisplayList := rl.tcDisplayType == TabDisplayList
 
 	var item, description string
-	for i := rl.tcOffset; i < len(suggestions); i++ {
+	for i := rl.tcOffset; i < suggestions.Len(); i++ {
 		y++
 		if y > rl.tcMaxY {
 			break
 		}
 
-		if rl.tcDisplayType == TabDisplayList {
-			item = rl.tcPrefix + suggestions[i]
-			if len(item) > maxLength {
-				item = item[:maxLength-3] + "..."
-			}
-
-			description = rl.tcDescriptions[suggestions[i]]
-			if len(description) > maxDescWidth {
-				description = description[:maxDescWidth-3] + "..."
-			}
+		if isTabDisplayList {
+			item = runeWidthTruncate(suggestions.ItemValue(i), maxLength)
+			description = runeWidthTruncate(rl.tcDescriptions[suggestions.ItemLookupValue(i)], maxDescWidth)
 
 		} else {
-			item = rl.tcPrefix + suggestions[i]
-			if len(item) > maxDescWidth {
-				item = item[:maxDescWidth-3] + "..."
-			}
-
-			description = rl.tcDescriptions[suggestions[i]]
-			if len(description) > maxLength {
-				description = description[:maxLength-3] + "..."
-			}
+			item = runeWidthTruncate(suggestions.ItemValue(i), maxDescWidth)
+			description = runeWidthTruncate(rl.tcDescriptions[suggestions.ItemLookupValue(i)], maxLength)
 		}
 
-		if rl.tcDisplayType == TabDisplayList {
-			printf("\r\n%s %-"+cellWidth+"s %s %s",
-				highlight(y), item, seqReset, description)
+		if isTabDisplayList {
+			output += fmt.Sprintf("\r\n%s %s %s %s",
+				highlight(rl, y), runeWidthFillRight(item, maxLength),
+				seqReset, description)
+
 		} else {
-			printf("\r\n %-"+cellWidth+"s %s %-"+itemWidth+"s %s",
-				description, highlight(y), item, seqReset)
+			output += fmt.Sprintf("\r\n %s %s %s %s",
+				runeWidthFillRight(description, maxLength), highlight(rl, y),
+				runeWidthFillRight(item, maxDescWidth), seqReset)
+
+		}
+
+		if y == rl.tcPosY {
+			rl.previewItem = suggestions.ItemValue(i)
 		}
 	}
 
-	if len(suggestions) < rl.tcMaxX {
-		rl.tcUsedY = len(suggestions)
+	if suggestions.Len() < rl.tcMaxX {
+		rl.tcUsedY = suggestions.Len()
 	} else {
 		rl.tcUsedY = rl.tcMaxY
 	}
+
+	return output
+}
+
+func highlight(rl *Instance, y int) string {
+	if y == rl.tcPosY {
+		return seqBgWhite + seqFgBlack
+	}
+	return ""
 }
