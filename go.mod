@@ -1,4 +1,4 @@
-module github.com/lmorg/readline
+module github.com/lmorg/readline/v3
 
 go 1.11
 
