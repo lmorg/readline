@@ -1,5 +1,17 @@
 # lmorg/readline
 
+## Import Path
+
+From CLI:
+```
+go get github.com/lmorg/readline/v4
+```
+
+From Go code:
+```
+import "github.com/lmorg/readline/v4"
+```
+
 ## Preface
 
 This project began a few years prior to this git commit history as an API for
@@ -57,7 +69,7 @@ func main() {
 However I suggest you read through the examples in `/examples` for help using
 some of the more advanced features in `readline`.
 
-The source for `readline` will also be documented in godoc: https://godoc.org/github.com/lmorg/readline
+The source for `readline` will also be documented in godoc: https://godoc.org/github.com/lmorg/readline/v4
 
 ## Version Information
 
