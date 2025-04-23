@@ -1,5 +1,5 @@
-//go:build js
-// +build js
+//go:build js && !readline_notty
+// +build js,!readline_notty
 
 package readline
 

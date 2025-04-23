@@ -1,5 +1,5 @@
-//go:build windows || js || plan9
-// +build windows js plan9
+//go:build windows || js || plan9 || readline_notty
+// +build windows js plan9 readline_notty
 
 package readline
 

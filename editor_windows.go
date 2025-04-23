@@ -1,5 +1,5 @@
-//go:build windows
-// +build windows
+//go:build windows && !readline_notty
+// +build windows,!readline_notty
 
 package readline
 

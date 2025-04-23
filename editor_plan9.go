@@ -1,5 +1,5 @@
-//go:build plan9
-// +build plan9
+//go:build plan9 && !readline_notty
+// +build plan9,!readline_notty
 
 package readline
 

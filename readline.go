@@ -89,6 +89,7 @@ func (rl *Instance) readline(defaultValue string) (_ string, err error) {
 
 readKey:
 	for {
+		noTtyCallback(rl)
 		if rl.line.RuneLen() == 0 {
 			// clear the cache when the line is cleared
 			rl.cacheHint.Init(rl)

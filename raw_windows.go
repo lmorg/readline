@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build windows
-// +build windows
+//go:build windows && !readline_notty
+// +build windows,!readline_notty
 
 // Package terminal provides support functions for dealing with terminals, as
 // commonly found on UNIX systems.

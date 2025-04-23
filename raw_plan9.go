@@ -12,6 +12,10 @@
 // 	        panic(err)
 // 	}
 // 	defer terminal.Restore(0, oldState)
+
+//go:build plan9 && !readline_notty
+// +build plan9,!readline_notty
+
 package readline
 
 import (

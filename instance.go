@@ -106,8 +106,8 @@ type Instance struct {
 	//cacheSyntaxDelayed   cacheSliceRune
 
 	// readline operating parameters
-	prompt        string //  = ">>> "
-	promptLen     int    //= 4
+	prompt        string // = ">>> "
+	promptLen     int    // = 4
 	line          *UnicodeT
 	lineChange    string // cache what had changed from previous line
 	termWidth     int
@@ -168,8 +168,13 @@ type Instance struct {
 	// event
 	evtKeyPress map[string]keyPressEventCallbackT
 
-	//ForceCrLf          bool
 	EnableGetCursorPos bool
+	noTtyCallback      chan *NoTtyCallbackT
+}
+
+type NoTtyCallbackT struct {
+	Line *UnicodeT
+	Hint string
 }
 
 // NewInstance is used to create a readline instance and initialise it with sane

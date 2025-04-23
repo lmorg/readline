@@ -35,61 +35,9 @@ func HkFnClearAfterCursor(rl *Instance) {
 	print(output)
 }
 
-func HkFnClearScreen(rl *Instance) {
-	rl.viUndoSkipAppend = true
-	if rl.previewMode != previewModeClosed {
-		HkFnModePreviewToggle(rl)
-	}
-	output := seqSetCursorPosTopLeft + seqClearScreen
-	output += rl.echoStr()
-	output += rl.renderHelpersStr()
-	print(output)
-}
-
 func HkFnClearLine(rl *Instance) {
 	rl.clearPrompt()
 	rl.resetHelpers()
-}
-
-func HkFnModeFuzzyFind(rl *Instance) {
-	rl.viUndoSkipAppend = true
-	if !rl.modeTabCompletion {
-		rl.modeAutoFind = true
-		rl.getTabCompletion()
-	}
-
-	rl.modeTabFind = true
-	print(rl.updateTabFindStr([]rune{}))
-}
-
-func HkFnModeSearchHistory(rl *Instance) {
-	rl.viUndoSkipAppend = true
-	rl.modeAutoFind = true
-	rl.tcOffset = 0
-	rl.modeTabCompletion = true
-	rl.tcDisplayType = TabDisplayMap
-	rl.tabMutex.Lock()
-	rl.tcSuggestions, rl.tcDescriptions = rl.autocompleteHistory()
-	rl.tabMutex.Unlock()
-	rl.initTabCompletion()
-
-	rl.modeTabFind = true
-	print(rl.updateTabFindStr([]rune{}))
-}
-
-func HkFnModeAutocomplete(rl *Instance) {
-	rl.viUndoSkipAppend = true
-	if rl.modeTabCompletion {
-		rl.moveTabCompletionHighlight(1, 0)
-	} else {
-		rl.getTabCompletion()
-	}
-
-	if rl.previewMode == previewModeOpen || rl.previewRef == previewRefLine {
-		rl.previewMode = previewModeAutocomplete
-	}
-
-	print(rl.renderHelpersStr())
 }
 
 func HkFnCursorJumpForwards(rl *Instance) {
@@ -104,43 +52,35 @@ func HkFnCursorJumpBackwards(rl *Instance) {
 	print(output)
 }
 
-func HkFnCancelAction(rl *Instance) {
+func _hkFnCancelActionModeAutoFind(rl *Instance) string {
 	rl.viUndoSkipAppend = true
-	var output string
-	switch {
-	case rl.modeAutoFind:
-		//output += rl.clearPreviewStr()
-		output += rl.resetTabFindStr()
-		output += rl.clearHelpersStr()
-		rl.resetTabCompletion()
-		output += rl.renderHelpersStr()
-
-	case rl.modeTabFind:
-		output += rl.resetTabFindStr()
-
-	case rl.modeViMode == vimCommand:
-		rl.vimCommandModeCancel()
-		//output += rl.clearHelpersStr()
-		output += rl.updateHelpersStr()
-		//output += rl.renderHelpersStr()
-
-	case rl.modeTabCompletion:
-		//output = rl.clearPreviewStr()
-		output += rl.clearHelpersStr()
-		rl.resetTabCompletion()
-		output += rl.renderHelpersStr()
-
-	default:
-		//if rl.line.RunePos() == rl.line.RuneLen() && rl.line.RuneLen() > 0 {
-		//	rl.line.SetRunePos(rl.line.RunePos() - 1)
-		//	output = moveCursorBackwardsStr(1)
-		//}
-		rl.modeViMode = vimKeys
-		rl.viIteration = ""
-		output += rl.viHintMessageStr()
-	}
-
-	print(output)
+	output := rl.resetTabFindStr()
+	output += rl.clearHelpersStr()
+	rl.resetTabCompletion()
+	output += rl.renderHelpersStr()
+	return output
+}
+func _hkFnCancelActionModeTabFind(rl *Instance) string {
+	rl.viUndoSkipAppend = true
+	return rl.resetTabFindStr()
+}
+func _hkFnCancelActionModeViModeVimCommand(rl *Instance) string {
+	rl.viUndoSkipAppend = true
+	rl.vimCommandModeCancel()
+	return rl.updateHelpersStr()
+}
+func _hkFnCancelActionModeTabCompletion(rl *Instance) string {
+	rl.viUndoSkipAppend = true
+	output := rl.clearHelpersStr()
+	rl.resetTabCompletion()
+	output += rl.renderHelpersStr()
+	return output
+}
+func _hkFnCancelActionDefault(rl *Instance) string {
+	rl.viUndoSkipAppend = true
+	rl.modeViMode = vimKeys
+	rl.viIteration = ""
+	return rl.viHintMessageStr()
 }
 
 func HkFnRecallWord1(rl *Instance)    { hkFnRecallWord(rl, 1) }
@@ -156,74 +96,6 @@ func HkFnRecallWord10(rl *Instance)   { hkFnRecallWord(rl, 10) }
 func HkFnRecallWord11(rl *Instance)   { hkFnRecallWord(rl, 11) }
 func HkFnRecallWord12(rl *Instance)   { hkFnRecallWord(rl, 12) }
 func HkFnRecallWordLast(rl *Instance) { hkFnRecallWord(rl, -1) }
-
-func HkFnModePreviewToggle(rl *Instance) {
-	if rl.PreviewLine == nil {
-		return
-	}
-	if !rl.modeAutoFind && !rl.modeTabCompletion && !rl.modeTabFind &&
-		rl.previewMode == previewModeClosed {
-
-		if rl.modeTabCompletion {
-			rl.moveTabCompletionHighlight(1, 0)
-		} else {
-			rl.getTabCompletion()
-		}
-		defer func() { rl.previewMode++ }()
-	}
-
-	_fnPreviewToggle(rl)
-}
-
-func _fnPreviewToggle(rl *Instance) {
-	rl.viUndoSkipAppend = true
-	var output string
-
-	switch rl.previewMode {
-	case previewModeClosed:
-		output = curPosSave + seqSaveBuffer + seqClearScreen
-		rl.previewMode++
-		size, _ := rl.getPreviewXY()
-		if size != nil {
-			output += rl.previewMoveToPromptStr(size)
-		}
-
-	case previewModeOpen:
-		print(rl.clearPreviewStr())
-
-	case previewModeAutocomplete:
-		print(rl.clearPreviewStr())
-		rl.resetHelpers()
-	}
-
-	output += rl.echoStr()
-	output += rl.renderHelpersStr()
-	print(output)
-}
-
-func HkFnModePreviewLine(rl *Instance) {
-	if rl.PreviewLine == nil {
-		return
-	}
-	if rl.PreviewInit != nil {
-		// forced rerun of command line preview
-		rl.PreviewInit()
-		rl.previewCache = nil
-	}
-
-	if !rl.modeAutoFind && !rl.modeTabCompletion && !rl.modeTabFind &&
-		rl.previewMode == previewModeClosed {
-		defer func() { rl.previewMode++ }()
-	}
-
-	rl.previewRef = previewRefLine
-
-	if rl.previewMode == previewModeClosed {
-		_fnPreviewToggle(rl)
-	} else {
-		print(rl.renderHelpersStr())
-	}
-}
 
 func HkFnUndo(rl *Instance) {
 	rl.viUndoSkipAppend = true
