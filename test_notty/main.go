@@ -36,7 +36,7 @@ func main() {
 	go func() {
 		for {
 			callback := <-ch
-			fmt.Println(callback.Line.String())
+			fmt.Printf("\r\n>>> %s\r\n(%s)", callback.Line.String(), callback.Hint)
 		}
 	}()
 

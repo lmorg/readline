@@ -3,7 +3,7 @@
 
 package readline
 
-func (rl *Instance) SetNoTtyCallback(callback chan NoTtyCallbackT) {
+func (rl *Instance) SetNoTtyCallback(callback chan *NoTtyCallbackT) {
 	panic("readline needs to be compiled with `readline_notty` to support this")
 }
 

@@ -169,7 +169,10 @@ type Instance struct {
 	evtKeyPress map[string]keyPressEventCallbackT
 
 	EnableGetCursorPos bool
-	noTtyCallback      chan *NoTtyCallbackT
+
+	// no TTY
+	_noTtyKeyPress chan []byte
+	_noTtyCallback chan *NoTtyCallbackT
 }
 
 type NoTtyCallbackT struct {

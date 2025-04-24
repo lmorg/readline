@@ -5,16 +5,14 @@ package readline
 
 import "errors"
 
-var _noTtyKeyPress = make(chan []byte)
-
-func KeyPress(b []byte) {
+func (rl *Instance) KeyPress(b []byte) {
 	go func() {
-		_noTtyKeyPress <- b
+		rl._noTtyKeyPress <- b
 	}()
 }
 
 func read(p []byte) (int, error) {
-	b, ok := <-_noTtyKeyPress
+	b, ok := <-rl._noTtyKeyPress
 
 	if !ok {
 		return 0, errors.New("channel closed")
