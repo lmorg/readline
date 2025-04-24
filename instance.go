@@ -189,6 +189,10 @@ func (rl *Instance) MakeNoTtyChan() chan *NoTtyCallbackT {
 }
 
 func noTtyCallback(rl *Instance) {
+	if !rl.isNoTty {
+		return
+	}
+
 	rl._noTtyCallback <- &NoTtyCallbackT{
 		Line: rl.line.Duplicate(),
 		Hint: string(rl.hintText),
