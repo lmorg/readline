@@ -1,5 +1,5 @@
-//go:build !windows && !js && !plan9 && !readline_notty
-// +build !windows,!js,!plan9,!readline_notty
+//go:build !windows && !js && !plan9
+// +build !windows,!js,!plan9
 
 package readline
 
@@ -10,6 +10,11 @@ import (
 )
 
 func (rl *Instance) sigwinch() {
+	if rl.isNoTty {
+		rl.closeSigwinch = func() {}
+		return
+	}
+
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGWINCH)
 	go func() {

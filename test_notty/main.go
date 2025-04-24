@@ -11,9 +11,7 @@ import (
 func main() {
 	rl := readline.NewInstance()
 
-	ch := make(chan *readline.NoTtyCallbackT)
-
-	rl.SetNoTtyCallback(ch)
+	ch := rl.MakeNoTtyChan()
 
 	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {

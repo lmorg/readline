@@ -1,6 +1,3 @@
-//go:build !windows
-// +build !windows
-
 package readline
 
 import (
@@ -11,6 +8,14 @@ import (
 	"strconv"
 	"time"
 )
+
+func (rl *Instance) launchEditor(multiline []rune) ([]rune, error) {
+	if rl.isNoTty {
+		return multiline, nil //errors.New("not supported with no TTY call")
+	}
+
+	return rl._launchEditor(multiline)
+}
 
 func (rl *Instance) writeTempFile(content []byte) (string, error) {
 	fileID := strconv.Itoa(time.Now().Nanosecond()) + ":" + rl.line.String()

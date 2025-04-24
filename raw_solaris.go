@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build solaris && !readline_notty
-// +build solaris,!readline_notty
+//go:build solaris
+// +build solaris
 
 package readline
 
@@ -72,8 +72,8 @@ func GetState(fd int) (*State, error) {
 	}, nil
 }
 
-// GetSize returns the dimensions of the given terminal.
-func GetSize(fd int) (width, height int, err error) {
+// getSize returns the dimensions of the given terminal.
+func getSize(fd int) (width, height int, err error) {
 	ws, err := unix.IoctlGetWinsize(fd, unix.TIOCGWINSZ)
 	if err != nil {
 		return 0, 0, err

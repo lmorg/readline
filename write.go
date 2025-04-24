@@ -8,10 +8,28 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-func printf(format string, a ...interface{}) {
+func (rl *Instance) printf(format string, a ...interface{}) {
 	s := fmt.Sprintf(format, a...)
-	print(s)
+	rl.print(s)
 }
+
+func (rl *Instance) print(s string) {
+	if rl.isNoTty {
+		return
+	}
+
+	_print(s)
+}
+
+func (rl *Instance) printErr(s string) {
+	if rl.isNoTty {
+		return
+	}
+
+	_printErr(s)
+}
+
+func print() {}
 
 // var rxAnsiSgr = regexp.MustCompile("\x1b\\[[:;0-9]+m")
 var rxAnsiSgr = regexp.MustCompile(`\x1b\[([0-9]{1,2}(;[0-9]{1,2})*)?[m|K]`)
@@ -167,7 +185,7 @@ func (rl *Instance) clearPrompt() {
 	rl.line.Set(rl, []rune{})
 	rl.line.SetRunePos(0)
 
-	print(output)
+	rl.print(output)
 }
 
 func (rl *Instance) resetHelpers() {
@@ -178,7 +196,7 @@ func (rl *Instance) resetHelpers() {
 	rl.resetHintText()
 	rl.resetTabCompletion()
 
-	print(output)
+	rl.print(output)
 }
 
 func (rl *Instance) clearHelpersStr() string {

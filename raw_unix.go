@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build (darwin || dragonfly || freebsd || (linux && !appengine) || netbsd || openbsd) && !readline_notty
+//go:build darwin || dragonfly || freebsd || (linux && !appengine) || netbsd || openbsd
 // +build darwin dragonfly freebsd linux,!appengine netbsd openbsd
-// +build !readline_notty
 
 package readline
 
@@ -68,8 +67,8 @@ func Restore(fd int, state *State) error {
 	return unix.IoctlSetTermios(fd, ioctlWriteTermios, &state.termios)
 }
 
-// GetSize returns the dimensions of the given terminal.
-func GetSize(fd int) (width, height int, err error) {
+// getSize returns the dimensions of the given terminal.
+func getSize(fd int) (width, height int, err error) {
 	ws, err := unix.IoctlGetWinsize(fd, unix.TIOCGWINSZ)
 	if err != nil {
 		return -1, -1, err

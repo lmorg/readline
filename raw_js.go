@@ -1,5 +1,5 @@
-//go:build js && !readline_notty
-// +build js,!readline_notty
+//go:build js
+// +build js
 
 package readline
 
@@ -22,7 +22,7 @@ func Restore(_ int, state *State) error {
 	return nil
 }
 
-// GetSize the default terminal size in the webpage
-func GetSize(_ int) (width, height int, err error) {
+// getSize the default terminal size in the webpage
+func getSize(_ int) (width, height int, err error) {
 	return VTerm.GetSize()
 }

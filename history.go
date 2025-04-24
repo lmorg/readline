@@ -118,8 +118,8 @@ func (rl *Instance) _walkHistory(i int, oldLine string) {
 		newLine, err = rl.History.GetLine(rl.histPos + i)
 		if err != nil {
 			rl.resetHelpers()
-			print("\r\n" + err.Error() + "\r\n")
-			print(rl.prompt)
+			rl.print("\r\n" + err.Error() + "\r\n")
+			rl.print(rl.prompt)
 			return
 		}
 
@@ -149,13 +149,13 @@ func (rl *Instance) _walkHistory(i int, oldLine string) {
 
 	if i > 0 {
 		_, y := rl.lineWrapCellLen()
-		print(strings.Repeat("\r\n", y))
+		rl.print(strings.Repeat("\r\n", y))
 		rl.line.SetRunePos(rl.line.RuneLen())
 	} else {
 		rl.line.SetCellPos(rl.termWidth - rl.promptLen - 1)
 	}
-	print(rl.echoStr())
-	print(rl.updateHelpersStr())
+	rl.print(rl.echoStr())
+	rl.print(rl.updateHelpersStr())
 }
 
 func (rl *Instance) autocompleteHistory() ([]string, map[string]string) {

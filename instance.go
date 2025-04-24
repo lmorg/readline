@@ -171,6 +171,7 @@ type Instance struct {
 	EnableGetCursorPos bool
 
 	// no TTY
+	isNoTty        bool
 	_noTtyKeyPress chan []byte
 	_noTtyCallback chan *NoTtyCallbackT
 }
@@ -178,6 +179,28 @@ type Instance struct {
 type NoTtyCallbackT struct {
 	Line *UnicodeT
 	Hint string
+}
+
+func (rl *Instance) MakeNoTtyChan() chan *NoTtyCallbackT {
+	rl.isNoTty = true
+	rl._noTtyKeyPress = make(chan []byte)
+	rl._noTtyCallback = make(chan *NoTtyCallbackT)
+	return rl._noTtyCallback
+}
+
+func noTtyCallback(rl *Instance) {
+	rl._noTtyCallback <- &NoTtyCallbackT{
+		Line: rl.line.Duplicate(),
+		Hint: string(rl.hintText),
+	}
+}
+
+// close is only needed if you're not running as a TTY
+func (rl *Instance) close() {
+	if rl.isNoTty {
+		close(rl._noTtyKeyPress)
+		close(rl._noTtyCallback)
+	}
 }
 
 // NewInstance is used to create a readline instance and initialise it with sane
