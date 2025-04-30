@@ -14,15 +14,12 @@ import "github.com/lmorg/readline/v4"
 
 ## Preface
 
-This project began a few years prior to this git commit history as an API for
-_[Murex](https://github.com/lmorg/murex)_, an alternative UNIX shell, because
-I wasn't satisfied with the state of existing Go packages for readline (at that
-time they were either bugger and/or poorly maintained, or lacked features I
-desired). The state of things for readline in Go may have changed since then
-however own package had also matured and grown to include many more features
-that has arisen during the development of Murex. So it seemed only fair to
-give back to the community considering it was other peoples readline libraries
-that allowed me rapidly prototype Murex during it's early stages of development
+This package provides the interactive capabilities for various command line
+interfaces such as the shell [Murex](https://murex.rocks).
+
+It also has experimental support for handling text input operations in GUI
+applications. However its primary focus is as a "batteries included"
+CLI input library.
 
 ## `readline` In Action
 
@@ -30,7 +27,7 @@ that allowed me rapidly prototype Murex during it's early stages of development
 
 This is a very rough and ready recording but it does demonstrate a few of the
 features available in `readline`. These features include:
-* hint text (the blue status text below the prompt - however the colour is 
+* hint text (the blue status text below the prompt - however the colour is
   configurable)
 * syntax highlighting (albeit there isn't much syntax to highlight in the
   example)
@@ -55,7 +52,7 @@ func main() {
 
     for {
         line, err := rl.Readline()
-        
+
         if err != nil {
             fmt.Println("Error:", err)
             return
@@ -101,6 +98,12 @@ updating modules, I will make the following guarantees:
 
 My recommendation is to pin to either the `minor` or `patch` release and I will
 endeavour to keep breaking changes to an absolute minimum.
+
+## Hotkeys
+
+`readline` hotkeys can be found in [Murex's documentation](https://murex.rocks/user-guide/terminal-keys.html).
+While some of that document will be specific to Murex, the vast majority of
+Murex's interactive capabilities is leveraged via this `readline` package.
 
 ## Change Log
 

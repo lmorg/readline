@@ -9,7 +9,7 @@ import (
 
 var Stdin = make(chan string, 0)
 
-func read(b []byte) (int, error) {
+func (rl *Instance) read(b []byte) (int, error) {
 	stdin := <-Stdin
 
 	if len(stdin) > len(b) {

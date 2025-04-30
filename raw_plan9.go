@@ -12,6 +12,10 @@
 // 	        panic(err)
 // 	}
 // 	defer terminal.Restore(0, oldState)
+
+//go:build plan9
+// +build plan9
+
 package readline
 
 import (
@@ -45,7 +49,7 @@ func Restore(fd int, state *State) error {
 	return fmt.Errorf("terminal: Restore not implemented on %s/%s", runtime.GOOS, runtime.GOARCH)
 }
 
-// GetSize returns the dimensions of the given terminal.
-func GetSize(fd int) (width, height int, err error) {
+// getSize returns the dimensions of the given terminal.
+func getSize(fd int) (width, height int, err error) {
 	return 0, 0, fmt.Errorf("terminal: GetSize not implemented on %s/%s", runtime.GOOS, runtime.GOARCH)
 }

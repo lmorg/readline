@@ -20,3 +20,13 @@ func removeNonPrintableChars(s []byte) int {
 
 	return i
 }
+
+func (rl *Instance) KeyPress(b []byte) {
+	if !rl.isNoTty {
+		panic("missing NoTTY call")
+	}
+
+	go func() {
+		rl._noTtyKeyPress <- b
+	}()
+}

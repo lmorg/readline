@@ -20,6 +20,15 @@ features are added.
 
 ## Changes
 
+### 4.1.0
+
+* Murex has switched back to calling this package for `readline`, meaning this
+  package will now see more regular updates and bug fixes
+
+* bugfix: cursor wouldn't step backwards in VIM mode when cursor at end of line
+
+* experimental support added for integrating `readline` into GUI applications
+
 ### 4.0.0
 
 * support for wide and zero width unicode characters
@@ -29,13 +38,13 @@ features are added.
   ([inherited from Murex](https://murex.rocks/user-guide/interactive-shell.html#preview))
 
 * API improvements
-  
+
 * rewritten event system
   ([discussion](https://github.com/lmorg/murex/discussions/799))
 
 * vastly improved buffered rendering -- this leads to few rendering glitches
   and particularly on slower machines and/or terminals
-  
+
 * added missing vim and emacs keybindings
   ([full list of keybindings](listhttps://murex.rocks/user-guide/terminal-keys.html))
 
@@ -69,7 +78,7 @@ inherited from readline's use in murex (https://github.com/lmorg/murex)
 * Delayed tab completion - allows asynchronous updates to the tab completion so
   slower suggestions do not halt the user experience
 
-* Delayed syntax timer - allows syntax highlighting to run asynchronously for 
+* Delayed syntax timer - allows syntax highlighting to run asynchronously for
   slower parsers (eg spell checkers)
 
 * Support for GetCursorPos ANSI escape sequence (though I don't have a terminal

@@ -52,7 +52,7 @@ func (rl *Instance) ForceHintTextUpdate(s string) {
 	rl.hintText = []rune(s)
 
 	rl.tabMutex.Lock()
-	print(rl._writeHintTextStr(s))
+	rl.print(rl._writeHintTextStr(s))
 	rl.tabMutex.Unlock()
 }
 

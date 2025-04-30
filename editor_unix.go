@@ -10,7 +10,7 @@ import (
 
 const defaultEditor = "vi"
 
-func (rl *Instance) launchEditor(multiline []rune) ([]rune, error) {
+func (rl *Instance) _launchEditor(multiline []rune) ([]rune, error) {
 	name, err := rl.writeTempFile([]byte(string(multiline)))
 	if err != nil {
 		return multiline, err

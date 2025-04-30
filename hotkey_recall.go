@@ -32,7 +32,7 @@ func hkFnRecallWord(rl *Instance, i int) {
 
 	word := rTrimWhiteSpace(tokens[i-1])
 	output := rl.insertStr([]rune(word + " "))
-	print(output)
+	rl.print(output)
 }
 
 // getLastLineTokensBySpace is a method because we might see value in reusing this

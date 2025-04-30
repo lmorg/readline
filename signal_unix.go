@@ -10,6 +10,11 @@ import (
 )
 
 func (rl *Instance) sigwinch() {
+	if rl.isNoTty {
+		rl.closeSigwinch = func() {}
+		return
+	}
+
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGWINCH)
 	go func() {

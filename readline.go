@@ -23,12 +23,14 @@ func (rl *Instance) ReadlineWithDefault(defaultValue string) (string, error) {
 }
 
 func (rl *Instance) readline(defaultValue string) (_ string, err error) {
+	var state *State
+
 	rl.fdMutex.Lock()
 	rl.Active = true
-
-	state, err := MakeRaw(int(os.Stdin.Fd()))
-	rl.sigwinch()
-
+	if !rl.isNoTty {
+		state, err = MakeRaw(int(os.Stdin.Fd()))
+		rl.sigwinch()
+	}
 	rl.fdMutex.Unlock()
 
 	if err != nil {
@@ -40,22 +42,24 @@ func (rl *Instance) readline(defaultValue string) (_ string, err error) {
 	}
 
 	defer func() {
-		print(rl.clearPreviewStr())
+		rl.print(rl.clearPreviewStr())
 
 		rl.fdMutex.Lock()
-
-		rl.closeSigwinch()
-
 		rl.Active = false
-		// return an error if Restore fails. However we don't want to return
-		// `nil` if there is no error because there might be a CtrlC or EOF
-		// that needs to be returned
-		r := Restore(int(os.Stdin.Fd()), state)
-		if r != nil {
-			err = r
-		}
+		if !rl.isNoTty {
+			rl.closeSigwinch()
 
+			// return an error if Restore fails. However we don't want to return
+			// `nil` if there is no error because there might be a CtrlC or EOF
+			// that needs to be returned
+			r := Restore(int(os.Stdin.Fd()), state)
+			if r != nil {
+				err = r
+			}
+		}
 		rl.fdMutex.Unlock()
+
+		rl.close()
 	}()
 
 	rl.line.Set(rl, []rune(defaultValue))
@@ -69,12 +73,12 @@ func (rl *Instance) readline(defaultValue string) (_ string, err error) {
 	rl.resetTabCompletion()
 
 	rl.forceNewLine()
-	print(rl.prompt + rl.line.String())
+	rl.print(rl.prompt + rl.line.String())
 
 	if len(rl.multiSplit) > 0 {
 		r := []rune(rl.multiSplit[0])
-		print(rl.readlineInputStr(r))
-		print(rl.carriageReturnStr())
+		rl.print(rl.readlineInputStr(r))
+		rl.print(rl.carriageReturnStr())
 		if len(rl.multiSplit) > 1 {
 			rl.multiSplit = rl.multiSplit[1:]
 		} else {
@@ -85,10 +89,11 @@ func (rl *Instance) readline(defaultValue string) (_ string, err error) {
 
 	rl.termWidth = GetTermWidth()
 	rl.getHintText()
-	print(rl.renderHelpersStr())
+	rl.print(rl.renderHelpersStr())
 
 readKey:
 	for {
+		noTtyCallback(rl)
 		if rl.line.RuneLen() == 0 {
 			// clear the cache when the line is cleared
 			rl.cacheHint.Init(rl)
@@ -101,7 +106,7 @@ readKey:
 		var i int
 
 		if !rl.skipStdinRead {
-			i, err = read(b)
+			i, err = rl.read(b)
 			if err != nil {
 				return "", err
 			}
@@ -125,8 +130,8 @@ readKey:
 
 			r = []rune(rl.multiSplit[0])
 			rl.modeViMode = vimInsert
-			print(rl.readlineInputStr(r))
-			print(rl.carriageReturnStr())
+			rl.print(rl.readlineInputStr(r))
+			rl.print(rl.carriageReturnStr())
 			rl.multiline = []byte{}
 			if len(rl.multiSplit) > 1 {
 				rl.multiSplit = rl.multiSplit[1:]
@@ -141,8 +146,8 @@ readKey:
 			var id int
 			evtState := rl.newEventState(keyPress)
 		nextEvent:
-			print(rl.clearHelpersStr())
-			print("\r" + seqClearLine)
+			rl.print(rl.clearHelpersStr())
+			rl.print("\r" + seqClearLine)
 			evt := rl.evtKeyPress[keyPress](id, evtState)
 			rl.forceNewLine()
 
@@ -156,7 +161,7 @@ readKey:
 			if len(evt.Actions) == 0 {
 				output := rl.echoStr()
 				output += rl.renderHelpersStr()
-				print(output)
+				rl.print(output)
 			}
 
 			if len(evt.HintText) > 0 {
@@ -190,7 +195,7 @@ readKey:
 				rl.delayedTabContext.cancel()
 			}
 			rl.modeTabCompletion = false
-			print(rl.updateHelpersStr())
+			rl.print(rl.updateHelpersStr())
 		}
 
 		switch b[0] {
@@ -200,14 +205,14 @@ readKey:
 		case charCtrlC:
 			output := rl.clearPreviewStr()
 			output += rl.clearHelpersStr()
-			print(output)
+			rl.print(output)
 			return "", ErrCtrlC
 
 		case charEOF:
 			if rl.line.RuneLen() == 0 {
 				output := rl.clearPreviewStr()
 				output += rl.clearHelpersStr()
-				print(output)
+				rl.print(output)
 				return "", ErrEOF
 			}
 
@@ -242,7 +247,7 @@ readKey:
 			fallthrough
 		case '\n':
 			if rl.modeViMode == vimCommand {
-				print(rl.vimCommandModeReturnStr())
+				rl.print(rl.vimCommandModeReturnStr())
 				continue
 			}
 
@@ -260,14 +265,14 @@ readKey:
 			case rl.previewMode == previewModeOpen:
 				output += rl.clearPreviewStr()
 				output += rl.clearHelpersStr()
-				print(output)
+				rl.print(output)
 				continue
 			case rl.previewMode == previewModeAutocomplete:
 				rl.previewMode = previewModeOpen
 				if !rl.modeTabCompletion {
 					output += rl.clearPreviewStr()
 					output += rl.clearHelpersStr()
-					print(output)
+					rl.print(output)
 					continue
 				}
 			}
@@ -292,33 +297,33 @@ readKey:
 				} else {
 					output += rl.insertStr(tfLine)
 				}
-				print(output)
+				rl.print(output)
 				continue
 			}
 			output += rl.carriageReturnStr()
-			print(output)
+			rl.print(output)
 			return rl.line.String(), nil
 
 		case charBackspace, charBackspace2:
 			switch {
 			case rl.modeTabFind:
-				print(rl.backspaceTabFindStr())
+				rl.print(rl.backspaceTabFindStr())
 				rl.viUndoSkipAppend = true
 			case rl.modeViMode == vimCommand:
-				print(rl.vimCommandModeBackspaceStr())
+				rl.print(rl.vimCommandModeBackspaceStr())
 			default:
-				print(rl.backspaceStr())
+				rl.print(rl.backspaceStr())
 			}
 
 		case charEscape:
-			print(rl.escapeSeq(r[:i]))
+			rl.print(rl.escapeSeq(r[:i]))
 
 		default:
 			if rl.modeTabFind {
-				print(rl.updateTabFindStr(r[:i]))
+				rl.print(rl.updateTabFindStr(r[:i]))
 				rl.viUndoSkipAppend = true
 			} else {
-				print(rl.readlineInputStr(r[:i]))
+				rl.print(rl.readlineInputStr(r[:i]))
 				if len(rl.multiline) > 0 && rl.modeViMode == vimKeys {
 					rl.skipStdinRead = true
 				}
@@ -594,7 +599,7 @@ func (rl *Instance) SetPrompt(s string) {
 	s = strings.ReplaceAll(s, "\t", "    ")
 	split := strings.Split(s, "\n")
 	if len(split) > 1 {
-		print(strings.Join(split[:len(split)-1], "\r\n") + "\r\n")
+		rl.print(strings.Join(split[:len(split)-1], "\r\n") + "\r\n")
 		s = split[len(split)-1]
 	}
 	rl.prompt = s
@@ -624,34 +629,35 @@ func isMultiline(r []rune) bool {
 }
 
 func (rl *Instance) allowMultiline(data []byte) bool {
-	print(rl.clearHelpersStr())
-	printf("\r\nWARNING: %d bytes of multiline data was dumped into the shell!", len(data))
+	rl.printf("%s\r\nWARNING: %d bytes of multiline data was dumped into the shell!",
+		rl.clearHelpersStr(), len(data))
+
 	for {
-		print("\r\nDo you wish to proceed (yes|no|preview)? [y/n/p] ")
+		rl.print("\r\nDo you wish to proceed (yes|no|preview)? [y/n/p] ")
 
 		b := make([]byte, 1024*1024)
 
-		i, err := read(b)
+		i, err := rl.read(b)
 		if err != nil {
 			return false
 		}
 
 		if i > 1 {
 			rl.multiline = append(rl.multiline, b[:i]...)
-			print(moveCursorUpStr(2))
+			rl.print(moveCursorUpStr(2))
 			return rl.allowMultiline(append(data, b[:i]...))
 		}
 
 		s := string(b[:i])
-		print(s)
+		rl.print(s)
 
 		switch s {
 		case "y", "Y":
-			print("\r\n" + rl.prompt)
+			rl.print("\r\n" + rl.prompt)
 			return true
 
 		case "n", "N":
-			print("\r\n" + rl.prompt)
+			rl.print("\r\n" + rl.prompt)
 			return false
 
 		case "p", "P":
@@ -659,10 +665,10 @@ func (rl *Instance) allowMultiline(data []byte) bool {
 			if rl.SyntaxHighlighter != nil {
 				preview = rl.SyntaxHighlighter([]rune(preview))
 			}
-			print("\r\n" + preview)
+			rl.print("\r\n" + preview)
 
 		default:
-			print("\r\nInvalid response. Please answer `y` (yes), `n` (no) or `p` (preview)")
+			rl.print("\r\nInvalid response. Please answer `y` (yes), `n` (no) or `p` (preview)")
 		}
 	}
 }
@@ -671,10 +677,10 @@ func (rl *Instance) forceNewLine() {
 	x, _ := rl.getCursorPos()
 	switch x {
 	case -1:
-		print(string(leftMost()))
+		rl.print(string(leftMost()))
 	case 0:
 		// do nothing
 	default:
-		print("\r\n")
+		rl.print("\r\n")
 	}
 }

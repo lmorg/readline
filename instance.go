@@ -106,8 +106,8 @@ type Instance struct {
 	//cacheSyntaxDelayed   cacheSliceRune
 
 	// readline operating parameters
-	prompt        string //  = ">>> "
-	promptLen     int    //= 4
+	prompt        string // = ">>> "
+	promptLen     int    // = 4
 	line          *UnicodeT
 	lineChange    string // cache what had changed from previous line
 	termWidth     int
@@ -168,8 +168,43 @@ type Instance struct {
 	// event
 	evtKeyPress map[string]keyPressEventCallbackT
 
-	//ForceCrLf          bool
 	EnableGetCursorPos bool
+
+	// no TTY
+	isNoTty        bool
+	_noTtyKeyPress chan []byte
+	_noTtyCallback chan *NoTtyCallbackT
+}
+
+type NoTtyCallbackT struct {
+	Line *UnicodeT
+	Hint string
+}
+
+func (rl *Instance) MakeNoTtyChan() chan *NoTtyCallbackT {
+	rl.isNoTty = true
+	rl._noTtyKeyPress = make(chan []byte)
+	rl._noTtyCallback = make(chan *NoTtyCallbackT)
+	return rl._noTtyCallback
+}
+
+func noTtyCallback(rl *Instance) {
+	if !rl.isNoTty {
+		return
+	}
+
+	rl._noTtyCallback <- &NoTtyCallbackT{
+		Line: rl.line.Duplicate(),
+		Hint: string(rl.hintText),
+	}
+}
+
+// close is only needed if you're not running as a TTY
+func (rl *Instance) close() {
+	if rl.isNoTty {
+		close(rl._noTtyKeyPress)
+		close(rl._noTtyCallback)
+	}
 }
 
 // NewInstance is used to create a readline instance and initialise it with sane

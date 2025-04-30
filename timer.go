@@ -39,7 +39,7 @@ func delayedSyntaxTimer(rl *Instance, i int32) {
 	output := rl.moveCursorToStartStr()
 	output += sLine
 	output += rl.moveCursorFromEndToLinePosStr()
-	print(output)
+	rl.print(output)
 }
 
 // DelayedTabContext is a custom context interface for async updates to the tab completions
@@ -93,7 +93,7 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 	output := dtc.rl.clearHelpersStr()
 	//dtc.rl.ForceHintTextUpdate(" ")
 	output += dtc.rl.renderHelpersStr()
-	print(output)
+	dtc.rl.print(output)
 }
 
 // AppendDescriptions updates the tab completions with additional suggestions + descriptions asynchronously
@@ -137,7 +137,7 @@ func (dtc *DelayedTabContext) AppendDescriptions(suggestions map[string]string) 
 	output := dtc.rl.clearHelpersStr()
 	//dtc.rl.ForceHintTextUpdate(" ")
 	output += dtc.rl.renderHelpersStr()
-	print(output)
+	dtc.rl.print(output)
 }
 
 func delayedPreviewTimer(rl *Instance, fn PreviewFuncT, size *PreviewSizeT, item string) {
@@ -176,11 +176,11 @@ func delayedPreviewTimer(rl *Instance, fn PreviewFuncT, size *PreviewSizeT, item
 
 		if err != nil {
 			rl.previewCache = nil
-			print(output)
+			rl.print(output)
 			return
 		}
 
-		print(output)
+		rl.print(output)
 	}
 
 	ctx, rl.previewCancel = context.WithCancel(context.Background())

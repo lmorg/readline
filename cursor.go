@@ -26,6 +26,10 @@ func leftMost() []byte {
 var rxRcvCursorPos = regexp.MustCompile("^\x1b([0-9]+);([0-9]+)R$")
 
 func (rl *Instance) getCursorPos() (x int, y int) {
+	if rl.isNoTty {
+		return 0, 0
+	}
+
 	if !ForceCrLf {
 		return 0, 0
 	}
@@ -35,14 +39,14 @@ func (rl *Instance) getCursorPos() (x int, y int) {
 	}
 
 	disable := func() (int, int) {
-		printErr("\r\ngetCursorPos() not supported by terminal emulator, disabling....\r\n")
+		rl.printErr("\r\ngetCursorPos() not supported by terminal emulator, disabling....\r\n")
 		rl.EnableGetCursorPos = false
 		return -1, -1
 	}
 
-	print(seqGetCursorPos)
+	rl.print(seqGetCursorPos)
 	b := make([]byte, 64)
-	i, err := read(b)
+	i, err := rl.read(b)
 	if err != nil {
 		return disable()
 	}
