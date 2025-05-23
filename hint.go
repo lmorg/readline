@@ -60,14 +60,14 @@ func (rl *Instance) ForceHintTextUpdate(s string) {
 // handled from the calling function. eg writeHintTextStr()
 func (rl *Instance) _writeHintTextStr(hintText string) string {
 	// fix bug https://github.com/lmorg/murex/issues/376
-	if rl.termWidth == 0 {
-		rl.termWidth = GetTermWidth()
+	if rl.termWidth() == 0 {
+		rl.cacheTermWidth()
 	}
 
 	// Determine how many lines hintText spans over
 	// (Currently there is no support for carriage returns / new lines)
 	hintLength := strLen(hintText)
-	n := float64(hintLength) / float64(rl.termWidth)
+	n := float64(hintLength) / float64(rl.termWidth())
 	if float64(int(n)) != n {
 		n++
 	}
@@ -75,9 +75,9 @@ func (rl *Instance) _writeHintTextStr(hintText string) string {
 
 	if rl.hintY > 3 {
 		rl.hintY = 3
-		hintText = hintText[:(rl.termWidth*3)-2] + "…"
+		hintText = hintText[:(rl.termWidth()*3)-2] + "…"
 	} else {
-		padding := (rl.hintY * rl.termWidth) - len(hintText)
+		padding := (rl.hintY * rl.termWidth()) - len(hintText)
 		if padding < 0 {
 			padding = 0
 		}
@@ -92,7 +92,7 @@ func (rl *Instance) _writeHintTextStr(hintText string) string {
 	write += "\r\n" + rl.HintFormatting + hintText + seqReset
 
 	write += moveCursorUpStr(rl.hintY + lineY - posY)
-	write += moveCursorBackwardsStr(rl.termWidth)
+	write += moveCursorBackwardsStr(rl.termWidth())
 	write += moveCursorForwardsStr(posX)
 
 	return write

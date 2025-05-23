@@ -72,9 +72,18 @@ func (rl *Instance) initTabCompletion() {
 }
 
 func (rl *Instance) autocompleteHeightAdjust() {
-	_, height, err := GetSize(int(os.Stdout.Fd()))
-	if err != nil {
+	var (
+		height int
+		err    error
+	)
+
+	if rl.isNoTty {
 		height = 25
+	} else {
+		_, height, err = GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			height = 25
+		}
 	}
 
 	rl.previewAutocompleteHeight(height)

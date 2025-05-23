@@ -36,7 +36,7 @@ func (rl *Instance) initTabGrid() {
 
 	rl.tcPosX = 1
 	rl.tcPosY = 1
-	rl.tcMaxX = rl.termWidth / (rl.tcMaxLength + 2)
+	rl.tcMaxX = rl.termWidth() / (rl.tcMaxLength + 2)
 	rl.tcOffset = 0
 
 	// avoid a divide by zero error
@@ -137,7 +137,7 @@ func (rl *Instance) writeTabGridStr() string {
 		suggestions = newSuggestionsT(rl, rl.tcSuggestions)
 	}
 
-	iCellWidth := (rl.termWidth / rl.tcMaxX) - 2
+	iCellWidth := (rl.termWidth() / rl.tcMaxX) - 2
 	cellWidth := strconv.Itoa(iCellWidth)
 
 	x := 0

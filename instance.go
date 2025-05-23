@@ -110,7 +110,7 @@ type Instance struct {
 	promptLen     int    // = 4
 	line          *UnicodeT
 	lineChange    string // cache what had changed from previous line
-	termWidth     int
+	_termWidth    int
 	multiline     []byte
 	multiSplit    []string
 	skipStdinRead bool
@@ -181,10 +181,12 @@ type NoTtyCallbackT struct {
 	Hint string
 }
 
-func (rl *Instance) MakeNoTtyChan() chan *NoTtyCallbackT {
+func (rl *Instance) MakeNoTtyChan(termWidth int) chan *NoTtyCallbackT {
 	rl.isNoTty = true
 	rl._noTtyKeyPress = make(chan []byte)
 	rl._noTtyCallback = make(chan *NoTtyCallbackT)
+	rl._termWidth = termWidth
+	rl.SetPrompt("")
 	return rl._noTtyCallback
 }
 

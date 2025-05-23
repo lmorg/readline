@@ -152,7 +152,7 @@ func (rl *Instance) _walkHistory(i int, oldLine string) {
 		rl.print(strings.Repeat("\r\n", y))
 		rl.line.SetRunePos(rl.line.RuneLen())
 	} else {
-		rl.line.SetCellPos(rl.termWidth - rl.promptLen - 1)
+		rl.line.SetCellPos(rl.termWidth() - rl.promptLen - 1)
 	}
 	rl.print(rl.echoStr())
 	rl.print(rl.updateHelpersStr())

@@ -16,7 +16,7 @@ func delayedSyntaxTimer(rl *Instance, i int32) {
 		return
 	}
 
-	if rl.line.CellLen()+rl.promptLen > rl.termWidth {
+	if rl.line.CellLen()+rl.promptLen > rl.termWidth() {
 		// line wraps, which is hard to do with random ANSI escape sequences
 		// so better we don't bother trying.
 		return

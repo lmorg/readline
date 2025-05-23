@@ -87,7 +87,7 @@ func (rl *Instance) readline(defaultValue string) (_ string, err error) {
 		return rl.line.String(), nil
 	}
 
-	rl.termWidth = GetTermWidth()
+	rl.cacheTermWidth()
 	rl.getHintText()
 	rl.print(rl.renderHelpersStr())
 
@@ -110,7 +110,7 @@ readKey:
 			if err != nil {
 				return "", err
 			}
-			rl.termWidth = GetTermWidth()
+			rl.cacheTermWidth()
 		}
 		atomic.AddInt32(&rl.delayedSyntaxCount, 1)
 
@@ -359,7 +359,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 		// are we midway through a long line that wrap multiple terminal lines?
 		posX, posY := rl.lineWrapCellPos()
 		if posY > 0 {
-			pos := rl.line.CellPos() - rl.termWidth + rl.promptLen
+			pos := rl.line.CellPos() - rl.termWidth() + rl.promptLen
 			rl.line.SetCellPos(pos)
 
 			newX, _ := rl.lineWrapCellPos()
@@ -390,7 +390,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 		posX, posY := rl.lineWrapCellPos()
 		_, lineY := rl.lineWrapCellLen()
 		if posY < lineY {
-			pos := rl.line.CellPos() + rl.termWidth - rl.promptLen
+			pos := rl.line.CellPos() + rl.termWidth() - rl.promptLen
 			rl.line.SetCellPos(pos)
 
 			newX, _ := rl.lineWrapCellPos()
@@ -677,7 +677,7 @@ func (rl *Instance) forceNewLine() {
 	x, _ := rl.getCursorPos()
 	switch x {
 	case -1:
-		rl.print(string(leftMost()))
+		rl.print(string(rl.leftMost()))
 	case 0:
 		// do nothing
 	default:

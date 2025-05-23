@@ -29,8 +29,6 @@ func (rl *Instance) printErr(s string) {
 	_printErr(s)
 }
 
-func print() {}
-
 // var rxAnsiSgr = regexp.MustCompile("\x1b\\[[:;0-9]+m")
 var rxAnsiSgr = regexp.MustCompile(`\x1b\[([0-9]{1,2}(;[0-9]{1,2})*)?[m|K]`)
 
@@ -60,7 +58,7 @@ func (rl *Instance) echoStr() string {
 	//line += seqClearScreenBelow
 
 	promptLen := rl.promptLen
-	if promptLen < rl.termWidth {
+	if promptLen < rl.termWidth() {
 		line += rl.prompt
 	} else {
 		promptLen = 0
@@ -70,11 +68,11 @@ func (rl *Instance) echoStr() string {
 	case rl.PasswordMask != 0:
 		line += strings.Repeat(string(rl.PasswordMask), rl.line.CellLen())
 
-	case rl.line.CellLen()+promptLen > rl.termWidth:
+	case rl.line.CellLen()+promptLen > rl.termWidth():
 		fallthrough
 
 	case rl.SyntaxHighlighter == nil:
-		line += strings.Join(lineWrap(rl, rl.termWidth), "\r\n")
+		line += strings.Join(lineWrap(rl, rl.termWidth()), "\r\n")
 
 	default:
 		syntax := rl.cacheSyntax.Get(rl.line.Runes())
@@ -137,14 +135,16 @@ func lineWrap(rl *Instance, termWidth int) []string {
 }
 
 func (rl *Instance) lineWrapCellLen() (x, y int) {
-	return lineWrapCell(rl.promptLen, rl.line.Runes(), rl.termWidth)
+	return LineWrappedCellPos(rl.promptLen, rl.line.Runes(), rl.termWidth())
 }
 
 func (rl *Instance) lineWrapCellPos() (x, y int) {
-	return lineWrapCell(rl.promptLen, rl.line.Runes()[:rl.line.RunePos()], rl.termWidth)
+	return LineWrappedCellPos(rl.promptLen, rl.line.Runes()[:rl.line.RunePos()], rl.termWidth())
 }
 
-func lineWrapCell(promptLen int, line []rune, termWidth int) (x, y int) {
+// LineWrappedCellPos is a unicode and wide character aware function for
+// determining the x/y coordinates of a cell.
+func LineWrappedCellPos(promptLen int, line []rune, termWidth int) (x, y int) {
 	if promptLen >= termWidth {
 		promptLen = 0
 	}
@@ -174,12 +174,12 @@ func (rl *Instance) clearPrompt() {
 
 	output := rl.moveCursorToStartStr()
 
-	if rl.termWidth > rl.promptLen {
-		output += strings.Repeat(" ", rl.termWidth-rl.promptLen)
+	if rl.termWidth() > rl.promptLen {
+		output += strings.Repeat(" ", rl.termWidth()-rl.promptLen)
 	}
 	output += seqClearScreenBelow
 
-	output += moveCursorBackwardsStr(rl.termWidth)
+	output += moveCursorBackwardsStr(rl.termWidth())
 	output += rl.prompt
 
 	rl.line.Set(rl, []rune{})
