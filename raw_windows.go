@@ -64,8 +64,8 @@ func Restore(fd int, state *State) error {
 	return windows.SetConsoleMode(windows.Handle(fd), state.mode)
 }
 
-// getSize returns the dimensions of the given terminal.
-func getSize(fd int) (width, height int, err error) {
+// GetSize returns the dimensions of the given terminal.
+func GetSize(fd int) (width, height int, err error) {
 	var info windows.ConsoleScreenBufferInfo
 	if err := windows.GetConsoleScreenBufferInfo(windows.Handle(fd), &info); err != nil {
 		return 0, 0, err

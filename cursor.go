@@ -7,7 +7,11 @@ import (
 	"strconv"
 )
 
-func leftMost() []byte {
+func (rl *Instance) leftMost() []byte {
+	if rl.isNoTty {
+		return []byte{}
+	}
+
 	fd := int(os.Stdout.Fd())
 	w, _, err := GetSize(fd)
 	if err != nil {

@@ -136,7 +136,7 @@ func TestLineWrap(t *testing.T) {
 	}
 }
 
-func TestLineWrapCell(t *testing.T) {
+func TestLineWrappedCellPos(t *testing.T) {
 	type ExpectedT struct {
 		X, Y int
 	}
@@ -279,7 +279,7 @@ func TestLineWrapCell(t *testing.T) {
 
 	for i, test := range tests {
 		promptLen := runewidth.StringWidth(test.Prompt)
-		x, y := lineWrapCell(promptLen, []rune(test.Line), test.TermWidth)
+		x, y := LineWrappedCellPos(promptLen, []rune(test.Line), test.TermWidth)
 
 		if (test.Expected.X != x) || (test.Expected.Y != y) {
 			t.Error("X or Y does not match:")

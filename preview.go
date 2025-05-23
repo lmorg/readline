@@ -1,6 +1,7 @@
 package readline
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -94,6 +95,10 @@ type previewCacheT struct {
 }
 
 func (rl *Instance) getPreviewXY() (*PreviewSizeT, error) {
+	if rl.isNoTty {
+		return nil, errors.New("not supported in no TTY mode")
+	}
+
 	width, height, err := GetSize(int(os.Stdout.Fd()))
 	if err != nil {
 		return nil, err

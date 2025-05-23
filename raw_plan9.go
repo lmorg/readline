@@ -49,7 +49,7 @@ func Restore(fd int, state *State) error {
 	return fmt.Errorf("terminal: Restore not implemented on %s/%s", runtime.GOOS, runtime.GOARCH)
 }
 
-// getSize returns the dimensions of the given terminal.
-func getSize(fd int) (width, height int, err error) {
+// GetSize returns the dimensions of the given terminal.
+func GetSize(fd int) (width, height int, err error) {
 	return 0, 0, fmt.Errorf("terminal: GetSize not implemented on %s/%s", runtime.GOOS, runtime.GOARCH)
 }

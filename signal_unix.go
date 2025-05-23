@@ -23,15 +23,15 @@ func (rl *Instance) sigwinch() {
 			width := GetTermWidth()
 
 			switch {
-			case !rl.modeTabCompletion || width == rl.termWidth:
+			case !rl.modeTabCompletion || width == rl.termWidth():
 				// no nothing
 
-			case width < rl.termWidth:
-				rl.termWidth = width
+			case width < rl.termWidth():
+				rl._termWidth = width
 				HkFnClearScreen(rl)
 
 			default:
-				rl.termWidth = width
+				rl._termWidth = width
 			}
 
 		}

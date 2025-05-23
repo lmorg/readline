@@ -67,8 +67,8 @@ func Restore(fd int, state *State) error {
 	return unix.IoctlSetTermios(fd, ioctlWriteTermios, &state.termios)
 }
 
-// getSize returns the dimensions of the given terminal.
-func getSize(fd int) (width, height int, err error) {
+// GetSize returns the dimensions of the given TTY.
+func GetSize(fd int) (width, height int, err error) {
 	ws, err := unix.IoctlGetWinsize(fd, unix.TIOCGWINSZ)
 	if err != nil {
 		return -1, -1, err

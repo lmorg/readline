@@ -13,3 +13,15 @@ func GetTermWidth() (termWidth int) {
 
 	return
 }
+
+func (rl *Instance) termWidth() int {
+	return rl._termWidth
+}
+
+func (rl *Instance) cacheTermWidth() {
+	if rl.isNoTty {
+		return
+	}
+
+	rl._termWidth = GetTermWidth()
+}

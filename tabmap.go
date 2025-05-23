@@ -90,16 +90,16 @@ func (rl *Instance) writeTabMapStr() string {
 		suggestions = newSuggestionsT(rl, rl.tcSuggestions)
 	}
 
-	if rl.termWidth < 10 {
+	if rl.termWidth() < 10 {
 		// terminal too small. Probably better we do nothing instead of crash
 		return ""
 	}
 
 	maxLength := rl.tcMaxLength
-	if maxLength > rl.termWidth-9 {
-		maxLength = rl.termWidth - 9
+	if maxLength > rl.termWidth()-9 {
+		maxLength = rl.termWidth() - 9
 	}
-	maxDescWidth := rl.termWidth - maxLength - 4
+	maxDescWidth := rl.termWidth() - maxLength - 4
 
 	y := 0
 	rl.previewItem = ""
