@@ -231,6 +231,12 @@ readKey:
 		case charCtrlL:
 			HkFnClearScreen(rl)
 
+		case charCtrlN:
+			HkFnModeNextLine(rl)
+
+		case charCtrlP:
+			HkFnModePreviousLine(rl)
+
 		case charCtrlR:
 			HkFnModeSearchHistory(rl)
 
@@ -375,7 +381,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 			return output
 		}
 
-		rl.walkHistory(-1)
+		HkFnModePreviousLine(rl)
 
 	case seqDown:
 		rl.viUndoSkipAppend = true
@@ -406,7 +412,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 			return output
 		}
 
-		rl.walkHistory(1)
+		HkFnModeNextLine(rl)
 
 	case seqBackwards:
 		if rl.modeTabCompletion {

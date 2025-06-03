@@ -20,6 +20,12 @@ features are added.
 
 ## Changes
 
+### 4.1.2
+
+* hotkey: `ctrl+n`, next line
+
+* hotkey: `ctrl+p`, previous line 
+
 ### 4.1.0
 
 * Murex has switched back to calling this package for `readline`, meaning this

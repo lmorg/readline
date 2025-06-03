@@ -268,3 +268,13 @@ func HkFnModePreviewLine(rl *Instance) {
 		rl.print(rl.renderHelpersStr())
 	}
 }
+
+func HkFnModePreviousLine(rl *Instance) {
+	rl.viUndoSkipAppend = true
+	rl.walkHistory(-1)
+}
+
+func HkFnModeNextLine(rl *Instance) {
+	rl.viUndoSkipAppend = true
+	rl.walkHistory(1)
+}
