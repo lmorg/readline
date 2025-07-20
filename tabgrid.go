@@ -53,7 +53,7 @@ func (rl *Instance) initTabGrid() {
 	}
 	subset := rl.tcSuggestions[:max]
 
-	if rl.tcr.HintCache == nil {
+	if rl.tcr == nil || rl.tcr.HintCache == nil {
 		return
 	}
 
