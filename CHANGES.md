@@ -20,6 +20,12 @@ features are added.
 
 ## Changes
 
+### 4.1.3
+
+* bugfix: lazier regex for SGR codes 
+
+* bugfix: additional `nil` check in tabgrid
+
 ### 4.1.2
 
 * hotkey: `ctrl+n`, next line
