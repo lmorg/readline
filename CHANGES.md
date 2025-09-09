@@ -20,6 +20,10 @@ features are added.
 
 ## Changes
 
+### 4.1.4
+
+* bugfix: wide character rendering glitch
+ 
 ### 4.1.3
 
 * bugfix: lazier regex for SGR codes 

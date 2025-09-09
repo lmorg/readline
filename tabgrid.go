@@ -1,8 +1,7 @@
 package readline
 
 import (
-	"fmt"
-	"strconv"
+	"strings"
 
 	"github.com/mattn/go-runewidth"
 )
@@ -138,7 +137,7 @@ func (rl *Instance) writeTabGridStr() string {
 	}
 
 	iCellWidth := (rl.termWidth() / rl.tcMaxX) - 2
-	cellWidth := strconv.Itoa(iCellWidth)
+	//cellWidth := strconv.Itoa(iCellWidth)
 
 	x := 0
 	y := 1
@@ -169,7 +168,8 @@ func (rl *Instance) writeTabGridStr() string {
 			rl.tcDescriptions[suggestions.ItemLookupValue(i)] = value
 		}
 
-		output += fmt.Sprintf(" %-"+cellWidth+"s %s", caption, seqReset)
+		//output += fmt.Sprintf(" %-"+cellWidth+"s %s", caption, seqReset)
+		output += " " + caption + strings.Repeat(" ", iCellWidth-runewidth.StringWidth(caption)) + seqReset
 	}
 
 	rl.tcUsedY = y
