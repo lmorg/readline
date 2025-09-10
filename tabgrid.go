@@ -169,7 +169,7 @@ func (rl *Instance) writeTabGridStr() string {
 		}
 
 		//output += fmt.Sprintf(" %-"+cellWidth+"s %s", caption, seqReset)
-		output += " " + caption + strings.Repeat(" ", iCellWidth-runewidth.StringWidth(caption)) + seqReset
+		output += " " + caption + strings.Repeat(" ", iCellWidth-runewidth.StringWidth(caption)+1) + seqReset
 	}
 
 	rl.tcUsedY = y
