@@ -1,33 +1,56 @@
 package readline
 
-import "github.com/mattn/go-runewidth"
+import (
+	"sync"
+
+	"github.com/mattn/go-runewidth"
+)
 
 type UnicodeT struct {
 	rl    *Instance
 	value []rune
 	rPos  int
 	cPos  int
+	mutex sync.Mutex
 }
 
 func (u *UnicodeT) Set(rl *Instance, r []rune) {
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
 	u.rl = rl
 	u.value = r
 	u.cPos = u.cellPos()
 }
 
 func (u *UnicodeT) Runes() []rune {
-	return u.value
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
+	r := make([]rune, len(u.value))
+	copy(r, u.value)
+
+	return r
 }
 
 func (u *UnicodeT) String() string {
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
 	return string(u.value)
 }
 
 func (u *UnicodeT) RuneLen() int {
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
 	return len(u.value)
 }
 
 func (u *UnicodeT) RunePos() int {
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
 	return u.rPos
 }
 
@@ -42,6 +65,9 @@ func (u *UnicodeT) _offByOne(i int) int {
 }
 
 func (u *UnicodeT) SetRunePos(i int) {
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
 	if i < 0 {
 		i = 0
 	}
@@ -54,6 +80,9 @@ func (u *UnicodeT) SetRunePos(i int) {
 }
 
 func (u *UnicodeT) Duplicate() *UnicodeT {
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
 	dup := new(UnicodeT)
 	dup.value = make([]rune, len(u.value))
 	copy(dup.value, u.value)
@@ -63,7 +92,10 @@ func (u *UnicodeT) Duplicate() *UnicodeT {
 }
 
 func (u *UnicodeT) CellLen() int {
-	return runewidth.StringWidth(u.String())
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
+	return runewidth.StringWidth(string(u.value))
 }
 
 func (u *UnicodeT) cellPos() int {
@@ -81,10 +113,16 @@ func (u *UnicodeT) cellPos() int {
 }
 
 func (u *UnicodeT) CellPos() int {
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
 	return u.cPos
 }
 
 func (u *UnicodeT) SetCellPos(cPos int) {
+	u.mutex.Lock()
+	defer u.mutex.Unlock()
+
 	u._setCellPos(cPos)
 	i := u._offByOne(u.rPos)
 	if i != u.rPos {

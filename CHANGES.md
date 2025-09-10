@@ -22,7 +22,9 @@ features are added.
 
 ### 4.1.4
 
-* bugfix: wide character rendering glitch
+* bugfix: wide character rendering glitch in tab grid completions
+
+* bugfix: removed potential race condition in unicode package
  
 ### 4.1.3
 
