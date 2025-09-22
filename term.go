@@ -15,7 +15,7 @@ func GetTermWidth() (termWidth int) {
 }
 
 func (rl *Instance) termWidth() int {
-	return rl._termWidth
+	return int(rl._termWidth.Load())
 }
 
 func (rl *Instance) cacheTermWidth() {
@@ -23,5 +23,5 @@ func (rl *Instance) cacheTermWidth() {
 		return
 	}
 
-	rl._termWidth = GetTermWidth()
+	rl._termWidth.Store(int32(GetTermWidth()))
 }

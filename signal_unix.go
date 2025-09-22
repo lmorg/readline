@@ -27,11 +27,11 @@ func (rl *Instance) sigwinch() {
 				// no nothing
 
 			case width < rl.termWidth():
-				rl._termWidth = width
+				rl._termWidth.Store(int32(width))
 				HkFnClearScreen(rl)
 
 			default:
-				rl._termWidth = width
+				rl._termWidth.Store(int32(width))
 			}
 
 		}
