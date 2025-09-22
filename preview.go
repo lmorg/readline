@@ -151,6 +151,9 @@ func noLargerThan(src, max int) int {
 }
 
 func (rl *Instance) writePreviewStr() string {
+	rl.previewMutex.Lock()
+	defer rl.previewMutex.Unlock()
+
 	if rl.previewMode == previewModeClosed {
 		rl.previewCache = nil
 		return ""
