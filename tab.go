@@ -109,9 +109,11 @@ func (rl *Instance) writeTabCompletionStr() string {
 		return ""
 	}
 
+	hintY := int(rl.hintY.Load())
+
 	posX, posY := rl.lineWrapCellPos()
 	_, lineY := rl.lineWrapCellLen()
-	output := moveCursorDownStr(rl.hintY + lineY - posY)
+	output := moveCursorDownStr(hintY + lineY - posY)
 	output += "\r\n" + seqClearScreenBelow
 
 	switch rl.tcDisplayType {
@@ -128,7 +130,7 @@ func (rl *Instance) writeTabCompletionStr() string {
 		output += rl.writeTabGridStr()
 	}
 
-	output += moveCursorUpStr(rl.hintY + rl.tcUsedY + lineY - posY)
+	output += moveCursorUpStr(hintY + rl.tcUsedY + lineY - posY)
 	output += "\r" + moveCursorForwardsStr(posX)
 
 	return output

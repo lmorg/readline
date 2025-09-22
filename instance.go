@@ -121,7 +121,7 @@ type Instance struct {
 	histPos int
 
 	// hint text
-	hintY    int
+	hintY    atomic.Int32
 	hintText []rune
 
 	ScreenRefresh func()

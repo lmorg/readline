@@ -23,7 +23,7 @@ func (rl *Instance) writeHintTextStr() string {
 	defer rl.tabMutex.Unlock()
 
 	if rl.HintText == nil {
-		rl.hintY = 0
+		rl.hintY.Store(0)
 		return ""
 	}
 
@@ -71,13 +71,13 @@ func (rl *Instance) _writeHintTextStr(hintText string) string {
 	if float64(int(n)) != n {
 		n++
 	}
-	rl.hintY = int(n)
+	hintY := int(n)
 
-	if rl.hintY > 3 {
-		rl.hintY = 3
+	if hintY > 3 {
+		hintY = 3
 		hintText = hintText[:(rl.termWidth()*3)-2] + "…"
 	} else {
-		padding := (rl.hintY * rl.termWidth()) - len(hintText)
+		padding := (hintY * rl.termWidth()) - len(hintText)
 		if padding < 0 {
 			padding = 0
 		}
@@ -91,14 +91,16 @@ func (rl *Instance) _writeHintTextStr(hintText string) string {
 
 	write += "\r\n" + rl.HintFormatting + hintText + seqReset
 
-	write += moveCursorUpStr(rl.hintY + lineY - posY)
+	write += moveCursorUpStr(hintY + lineY - posY)
 	write += moveCursorBackwardsStr(rl.termWidth())
 	write += moveCursorForwardsStr(posX)
+
+	rl.hintY.Store(int32(hintY))
 
 	return write
 }
 
 func (rl *Instance) resetHintText() {
-	rl.hintY = 0
+	rl.hintY.Store(0)
 	rl.hintText = []rune{}
 }
