@@ -23,7 +23,7 @@ func (rl *Instance) sigwinch() {
 			width := GetTermWidth()
 
 			switch {
-			case !rl.modeTabCompletion || width == rl.termWidth():
+			case !rl.modeTabCompletion.Load() || width == rl.termWidth():
 				// no nothing
 
 			case width < rl.termWidth():

@@ -103,8 +103,6 @@ type Instance struct {
 	MaxCacheSize int
 	cacheHint    cacheSliceRune
 	cacheSyntax  cacheString
-	//cacheSyntaxHighlight cacheString
-	//cacheSyntaxDelayed   cacheSliceRune
 
 	// readline operating parameters
 	prompt        string // = ">>> "
@@ -136,7 +134,7 @@ type Instance struct {
 	PreviewLine   PreviewFuncT
 
 	// tab completion
-	modeTabCompletion bool
+	modeTabCompletion atomic.Bool
 	tabMutex          sync.Mutex
 	tcPrefix          string
 	tcSuggestions     []string

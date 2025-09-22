@@ -223,7 +223,7 @@ func (rl *Instance) renderHelpersStr() string {
 func (rl *Instance) updateHelpersStr() string {
 	rl.tcOffset = 0
 	rl.getHintText()
-	if rl.modeTabCompletion {
+	if rl.modeTabCompletion.Load() {
 		rl.getTabCompletion()
 	}
 	output := rl.clearHelpersStr()

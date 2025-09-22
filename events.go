@@ -72,7 +72,7 @@ func (rl *Instance) _getInputMode() string {
 		return EventModeInputVimCommand
 	case rl.modeTabFind:
 		return EventModeInputFuzzyFind
-	case rl.modeTabCompletion:
+	case rl.modeTabCompletion.Load():
 		return EventModeInputAutocomplete
 	default:
 		return EventModeInputDefault

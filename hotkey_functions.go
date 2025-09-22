@@ -130,7 +130,7 @@ func HkFnModeFuzzyFind(rl *Instance) {
 	}
 
 	rl.viUndoSkipAppend = true
-	if !rl.modeTabCompletion {
+	if !rl.modeTabCompletion.Load() {
 		rl.modeAutoFind = true
 		rl.getTabCompletion()
 	}
@@ -147,7 +147,7 @@ func HkFnModeSearchHistory(rl *Instance) {
 	rl.viUndoSkipAppend = true
 	rl.modeAutoFind = true
 	rl.tcOffset = 0
-	rl.modeTabCompletion = true
+	rl.modeTabCompletion.Store(true)
 	rl.tcDisplayType = TabDisplayMap
 	rl.tabMutex.Lock()
 	rl.tcSuggestions, rl.tcDescriptions = rl.autocompleteHistory()
@@ -164,7 +164,7 @@ func HkFnModeAutocomplete(rl *Instance) {
 	}
 
 	rl.viUndoSkipAppend = true
-	if rl.modeTabCompletion {
+	if rl.modeTabCompletion.Load() {
 		rl.moveTabCompletionHighlight(1, 0)
 	} else {
 		rl.getTabCompletion()
@@ -188,7 +188,7 @@ func HkFnCancelAction(rl *Instance) {
 	case rl.modeViMode == vimCommand:
 		rl.print(_hkFnCancelActionModeViModeVimCommand(rl))
 
-	case rl.modeTabCompletion && !rl.isNoTty:
+	case rl.modeTabCompletion.Load() && !rl.isNoTty:
 		rl.print(_hkFnCancelActionModeTabCompletion(rl))
 
 	default:
@@ -200,10 +200,10 @@ func HkFnModePreviewToggle(rl *Instance) {
 	if rl.isNoTty || rl.PreviewLine == nil {
 		return
 	}
-	if !rl.modeAutoFind && !rl.modeTabCompletion && !rl.modeTabFind &&
+	if !rl.modeAutoFind && !rl.modeTabCompletion.Load() && !rl.modeTabFind &&
 		rl.previewMode == previewModeClosed {
 
-		if rl.modeTabCompletion {
+		if rl.modeTabCompletion.Load() {
 			rl.moveTabCompletionHighlight(1, 0)
 		} else {
 			rl.getTabCompletion()
@@ -255,7 +255,7 @@ func HkFnModePreviewLine(rl *Instance) {
 		rl.previewCache = nil
 	}
 
-	if !rl.modeAutoFind && !rl.modeTabCompletion && !rl.modeTabFind &&
+	if !rl.modeAutoFind && !rl.modeTabCompletion.Load() && !rl.modeTabFind &&
 		rl.previewMode == previewModeClosed {
 		defer func() { rl.previewMode++ }()
 	}

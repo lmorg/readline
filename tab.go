@@ -61,7 +61,7 @@ func (rl *Instance) getTabCompletion() {
 }
 
 func (rl *Instance) initTabCompletion() {
-	rl.modeTabCompletion = true
+	rl.modeTabCompletion.Store(true)
 	rl.autocompleteHeightAdjust()
 
 	if rl.tcDisplayType == TabDisplayGrid {
@@ -105,7 +105,7 @@ func (rl *Instance) moveTabCompletionHighlight(x, y int) {
 }
 
 func (rl *Instance) writeTabCompletionStr() string {
-	if !rl.modeTabCompletion {
+	if !rl.modeTabCompletion.Load() {
 		return ""
 	}
 
@@ -137,7 +137,7 @@ func (rl *Instance) writeTabCompletionStr() string {
 }
 
 func (rl *Instance) resetTabCompletion() {
-	rl.modeTabCompletion = false
+	rl.modeTabCompletion.Store(false)
 	rl.tcOffset = 0
 	rl.tcUsedY = 0
 	rl.modeTabFind = false

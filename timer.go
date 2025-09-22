@@ -55,7 +55,7 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 		return
 	}
 
-	if !dtc.rl.modeTabCompletion {
+	if !dtc.rl.modeTabCompletion.Load() {
 		return
 	}
 
@@ -103,7 +103,7 @@ func (dtc *DelayedTabContext) AppendDescriptions(suggestions map[string]string) 
 		return
 	}
 
-	if !dtc.rl.modeTabCompletion {
+	if !dtc.rl.modeTabCompletion.Load() {
 		return
 	}
 

@@ -190,11 +190,11 @@ readKey:
 		rl.tabMutex.Lock()
 		lenTcS := len(rl.tcSuggestions)
 		rl.tabMutex.Unlock()
-		if rl.modeTabCompletion && lenTcS == 0 {
+		if rl.modeTabCompletion.Load() && lenTcS == 0 {
 			if rl.delayedTabContext.cancel != nil {
 				rl.delayedTabContext.cancel()
 			}
-			rl.modeTabCompletion = false
+			rl.modeTabCompletion.Store(false)
 			rl.print(rl.updateHelpersStr())
 		}
 
@@ -275,7 +275,7 @@ readKey:
 				continue
 			case rl.previewMode == previewModeAutocomplete:
 				rl.previewMode = previewModeOpen
-				if !rl.modeTabCompletion {
+				if !rl.modeTabCompletion.Load() {
 					output += rl.clearPreviewStr()
 					output += rl.clearHelpersStr()
 					rl.print(output)
@@ -283,7 +283,7 @@ readKey:
 				}
 			}
 
-			if rl.modeTabCompletion || len(rl.tfLine) != 0 /*&& len(suggestions) > 0*/ {
+			if rl.modeTabCompletion.Load() || len(rl.tfLine) != 0 /*&& len(suggestions) > 0*/ {
 				tfLine := rl.tfLine
 				cell := (rl.tcMaxX * (rl.tcPosY - 1)) + rl.tcOffset + rl.tcPosX - 1
 				output += rl.clearHelpersStr()
@@ -356,7 +356,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 	case seqUp:
 		rl.viUndoSkipAppend = true
 
-		if rl.modeTabCompletion {
+		if rl.modeTabCompletion.Load() {
 			rl.moveTabCompletionHighlight(0, -1)
 			output += rl.renderHelpersStr()
 			return output
@@ -386,7 +386,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 	case seqDown:
 		rl.viUndoSkipAppend = true
 
-		if rl.modeTabCompletion {
+		if rl.modeTabCompletion.Load() {
 			rl.moveTabCompletionHighlight(0, 1)
 			output += rl.renderHelpersStr()
 			return output
@@ -415,7 +415,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 		HkFnModeNextLine(rl)
 
 	case seqBackwards:
-		if rl.modeTabCompletion {
+		if rl.modeTabCompletion.Load() {
 			rl.moveTabCompletionHighlight(-1, 0)
 			output += rl.renderHelpersStr()
 			return output
@@ -425,7 +425,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 		rl.viUndoSkipAppend = true
 
 	case seqForwards:
-		if rl.modeTabCompletion {
+		if rl.modeTabCompletion.Load() {
 			rl.moveTabCompletionHighlight(1, 0)
 			output += rl.renderHelpersStr()
 			return output
@@ -443,7 +443,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 			output += rl.previewPreviousSectionStr()
 			return output
 
-		case rl.modeTabCompletion:
+		case rl.modeTabCompletion.Load():
 			return output
 
 		default:
@@ -457,7 +457,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 			output += rl.previewNextSectionStr()
 			return output
 
-		case rl.modeTabCompletion:
+		case rl.modeTabCompletion.Load():
 			return output
 
 		default:
@@ -466,7 +466,7 @@ func (rl *Instance) escapeSeq(r []rune) string {
 		}
 
 	case seqShiftTab:
-		if rl.modeTabCompletion {
+		if rl.modeTabCompletion.Load() {
 			rl.moveTabCompletionHighlight(-1, 0)
 			output += rl.renderHelpersStr()
 			return output
