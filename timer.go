@@ -61,11 +61,11 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 
 	max := dtc.rl.MaxTabCompleterRows * 20
 
+	dtc.rl.tabMutex.Lock()
+
 	if len(dtc.rl.tcSuggestions) == 0 {
 		dtc.rl.ForceHintTextUpdate(" ")
 	}
-
-	dtc.rl.tabMutex.Lock()
 
 	if dtc.rl.tcDescriptions == nil {
 		dtc.rl.tcDescriptions = make(map[string]string)
