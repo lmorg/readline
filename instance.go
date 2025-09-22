@@ -124,6 +124,7 @@ type Instance struct {
 
 	ScreenRefresh func()
 
+	previewMutex  sync.Mutex
 	PreviewInit   func()
 	previewMode   previewModeT
 	previewRef    previewRefT
@@ -145,7 +146,7 @@ type Instance struct {
 	tcPosY            int
 	tcMaxX            int
 	tcMaxY            int
-	tcUsedY           int
+	tcUsedY           atomic.Int32
 	tcMaxLength       int
 
 	// tab find

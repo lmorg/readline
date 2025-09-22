@@ -130,7 +130,7 @@ func (rl *Instance) writeTabCompletionStr() string {
 		output += rl.writeTabGridStr()
 	}
 
-	output += moveCursorUpStr(hintY + rl.tcUsedY + lineY - posY)
+	output += moveCursorUpStr(hintY + int(rl.tcUsedY.Load()) + lineY - posY)
 	output += "\r" + moveCursorForwardsStr(posX)
 
 	return output
@@ -139,7 +139,7 @@ func (rl *Instance) writeTabCompletionStr() string {
 func (rl *Instance) resetTabCompletion() {
 	rl.modeTabCompletion.Store(false)
 	rl.tcOffset = 0
-	rl.tcUsedY = 0
+	rl.tcUsedY.Store(0)
 	rl.modeTabFind = false
 	rl.modeAutoFind = false
 	rl.tfLine = []rune{}

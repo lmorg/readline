@@ -86,6 +86,7 @@ func (rl *Instance) moveTabGridHighlight(x, y int) {
 
 	rl.tcPosX += x
 	rl.tcPosY += y
+	tcUsedY := int(rl.tcUsedY.Load())
 
 	if rl.tcPosX < 1 {
 		rl.tcPosX = rl.tcMaxX
@@ -98,14 +99,14 @@ func (rl *Instance) moveTabGridHighlight(x, y int) {
 	}
 
 	if rl.tcPosY < 1 {
-		rl.tcPosY = rl.tcUsedY
+		rl.tcPosY = tcUsedY
 	}
 
-	if rl.tcPosY > rl.tcUsedY {
+	if rl.tcPosY > tcUsedY {
 		rl.tcPosY = 1
 	}
 
-	if rl.tcPosY == rl.tcUsedY && (rl.tcMaxX*(rl.tcPosY-1))+rl.tcPosX > suggestions.Len() {
+	if rl.tcPosY == tcUsedY && (rl.tcMaxX*(rl.tcPosY-1))+rl.tcPosX > suggestions.Len() {
 		if x < 0 {
 			rl.tcPosX = suggestions.Len() - (rl.tcMaxX * (rl.tcPosY - 1))
 		}
@@ -172,7 +173,7 @@ func (rl *Instance) writeTabGridStr() string {
 		output += " " + caption + strings.Repeat(" ", iCellWidth-runewidth.StringWidth(caption)+1) + seqReset
 	}
 
-	rl.tcUsedY = y
+	rl.tcUsedY.Store(int32(y))
 
 	return output
 }

@@ -143,9 +143,9 @@ func (rl *Instance) writeTabMapStr() string {
 	}
 
 	if suggestions.Len() < rl.tcMaxX {
-		rl.tcUsedY = suggestions.Len()
+		rl.tcUsedY.Store(int32(suggestions.Len()))
 	} else {
-		rl.tcUsedY = rl.tcMaxY
+		rl.tcUsedY.Store(int32(rl.tcMaxY))
 	}
 
 	return output
