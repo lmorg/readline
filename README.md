@@ -107,25 +107,7 @@ Murex's interactive capabilities is leveraged via this `readline` package.
 
 ## Change Log
 
-v4.0.0 marks a breaking change to the tab completion function.
-
-Earlier versions expected multiple parameters to be returned however from
-v4.0.0 onwards, a pointer to a structure is instead expected:
-```
-type TabCompleterReturnT struct {
-	Prefix       string
-	Suggestions  []string
-	Descriptions map[string]string
-	DisplayType  TabDisplayType
-	HintCache    HintCacheFuncT
-	Preview      PreviewFuncT
-}
-```
-This allows for more configurability and without the cost of copying multiple
-different pieces of data nor future breaking changes whenever additional new
-features are added.
-
-The full changelog can be viewed at [CHANGES.md](CHANGES.md)
+The full changelog can be viewed at [CHANGELOG.md](CHANGELOG.md)
 
 ## License Information
 

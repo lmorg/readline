@@ -1,10 +1,49 @@
 # lmorg/readline
 
+## Changelog
+
+### 4.2.0
+
+* readline: null check when using tab grid
+* readline: improved SGR detection
+* readline: fixed wider character rendering bug when using tab grid
+* readline: fixed potential race condition with read/write access to unicode slices
+* readline: fixed potential race condition with terminal width caching
+* readline: fixed potential race condition with asynchronous updates to tab completion
+* readline: fixed potential race condition with hint text height reporting
+* readline: fixed potential race condition with tab completion height reporting
+* readline: fixed potential race condition with previews
+* readline: fixed potential race condition with hint text cache
+
+### 4.1.4
+
+* bugfix: wide character rendering glitch in tab grid completions
+* bugfix: removed potential race condition in unicode package
+ 
+### 4.1.3
+
+* bugfix: lazier regex for SGR codes 
+* bugfix: additional `nil` check in tabgrid
+
+### 4.1.2
+
+* hotkey: `ctrl+n`, next line
+* hotkey: `ctrl+p`, previous line 
+
+### 4.1.0
+
+* Murex has switched back to calling this package for `readline`, meaning this
+  package will now see more regular updates and bug fixes
+* bugfix: cursor wouldn't step backwards in VIM mode when cursor at end of line
+* experimental support added for integrating `readline` into GUI applications
+
+### 4.0.0
+
 v4.0.0 marks a breaking change to the tab completion function.
 
 Earlier versions expected multiple parameters to be returned however from
 v4.0.0 onwards, a pointer to a structure is instead expected:
-```
+```go
 type TabCompleterReturnT struct {
 	Prefix       string
 	Suggestions  []string
@@ -18,59 +57,22 @@ This allows for more configurability and without the cost of copying multiple
 different pieces of data nor future breaking changes whenever additional new
 features are added.
 
-## Changes
-
-### 4.1.4
-
-* bugfix: wide character rendering glitch in tab grid completions
-
-* bugfix: removed potential race condition in unicode package
- 
-### 4.1.3
-
-* bugfix: lazier regex for SGR codes 
-
-* bugfix: additional `nil` check in tabgrid
-
-### 4.1.2
-
-* hotkey: `ctrl+n`, next line
-
-* hotkey: `ctrl+p`, previous line 
-
-### 4.1.0
-
-* Murex has switched back to calling this package for `readline`, meaning this
-  package will now see more regular updates and bug fixes
-
-* bugfix: cursor wouldn't step backwards in VIM mode when cursor at end of line
-
-* experimental support added for integrating `readline` into GUI applications
-
-### 4.0.0
+#### Other changes:
 
 * support for wide and zero width unicode characters
   ([inherited from Murex](https://murex.rocks/changelog/v4.0.html))
-
 * preview modes
   ([inherited from Murex](https://murex.rocks/user-guide/interactive-shell.html#preview))
-
 * API improvements
-
 * rewritten event system
   ([discussion](https://github.com/lmorg/murex/discussions/799))
-
 * vastly improved buffered rendering -- this leads to few rendering glitches
   and particularly on slower machines and/or terminals
-
 * added missing vim and emacs keybindings
   ([full list of keybindings](listhttps://murex.rocks/user-guide/terminal-keys.html))
-
 * additional tests
-
 * fixed glitches on Windows terminals
   ([discussion](https://github.com/lmorg/murex/issues/630))
-
 * readline command mode
   ([discussion](https://github.com/lmorg/murex/discussions/905))
 
@@ -79,10 +81,8 @@ features are added.
 This is a bug fix release:
 
 * Nil map panic fixed when using dtx.AppendSuggestions()
-
 * Hint text line proper blanked (this is a fix to a regression bug introduced
   in version 3.0.0)
-
 * Example 01 updated to reflect API changes in 3.0.0
 
 ### 3.0.0
@@ -92,20 +92,14 @@ inherited from readline's use in murex (https://github.com/lmorg/murex)
 
 * Wrapped lines finally working (where the input line is longer than the
   terminal width)
-
 * Delayed tab completion - allows asynchronous updates to the tab completion so
   slower suggestions do not halt the user experience
-
 * Delayed syntax timer - allows syntax highlighting to run asynchronously for
   slower parsers (eg spell checkers)
-
 * Support for GetCursorPos ANSI escape sequence (though I don't have a terminal
   which supports this to test the code on)
-
 * Better support for wrapped hint text lines
-
 * Fixed bug with $EDITOR error handling in Windows and Plan 9
-
 * Code clean up - fewer writes to the terminal
 
 If you just use the exported API end points then your code should still work
