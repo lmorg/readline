@@ -60,7 +60,6 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 	}
 
 	dtc.rl.tabMutex.Lock()
-	defer dtc.rl.tabMutex.Unlock()
 
 	if len(dtc.rl.tcSuggestions) == 0 {
 		dtc.rl.ForceHintTextUpdate(" ")
@@ -73,6 +72,7 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 	for i := range suggestions {
 		select {
 		case <-dtc.Context.Done():
+			dtc.rl.tabMutex.Unlock()
 			return
 
 		default:
@@ -86,9 +86,9 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 		}
 	}
 
+	dtc.rl.tabMutex.Unlock()
 	output := dtc.rl.clearHelpersStr()
-	//dtc.rl.ForceHintTextUpdate(" ")
-	output += dtc.rl.renderHelpersStr()
+	output += dtc.rl.renderHelpersStr() // calls mutex
 	dtc.rl.print(output)
 }
 
@@ -103,13 +103,11 @@ func (dtc *DelayedTabContext) AppendDescriptions(suggestions map[string]string) 
 		return
 	}
 
-	max := dtc.rl.MaxTabCompleterRows * 20
+	dtc.rl.tabMutex.Lock()
 
 	if len(dtc.rl.tcSuggestions) == 0 {
 		dtc.rl.ForceHintTextUpdate(" ")
 	}
-
-	dtc.rl.tabMutex.Lock()
 
 	for k := range suggestions {
 		select {
@@ -119,7 +117,7 @@ func (dtc *DelayedTabContext) AppendDescriptions(suggestions map[string]string) 
 
 		default:
 			if dtc.rl.tcDescriptions[k] != "" ||
-				(len(dtc.rl.tcSuggestions) < max && lists.Match(dtc.rl.tcSuggestions, k)) {
+				lists.Match(dtc.rl.tcSuggestions, k) {
 				// dedup
 				continue
 			}
@@ -129,10 +127,8 @@ func (dtc *DelayedTabContext) AppendDescriptions(suggestions map[string]string) 
 	}
 
 	dtc.rl.tabMutex.Unlock()
-
 	output := dtc.rl.clearHelpersStr()
-	//dtc.rl.ForceHintTextUpdate(" ")
-	output += dtc.rl.renderHelpersStr()
+	output += dtc.rl.renderHelpersStr() // calls mutex
 	dtc.rl.print(output)
 }
 

@@ -51,9 +51,10 @@ func (rl *Instance) writeHintTextStr() string {
 func (rl *Instance) ForceHintTextUpdate(s string) {
 	rl.hintText = []rune(s)
 
-	rl.tabMutex.Lock()
-	rl.print(rl._writeHintTextStr(s))
-	rl.tabMutex.Unlock()
+	if rl.tabMutex.TryLock() {
+		rl.print(rl._writeHintTextStr(s))
+		rl.tabMutex.Unlock()
+	}
 }
 
 // _writeHintTextStr doesn't contain any mutex locks. This will have to be
