@@ -59,8 +59,6 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 		return
 	}
 
-	max := dtc.rl.MaxTabCompleterRows * 20
-
 	dtc.rl.tabMutex.Lock()
 
 	if len(dtc.rl.tcSuggestions) == 0 {
@@ -79,7 +77,7 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 
 		default:
 			if dtc.rl.tcDescriptions[suggestions[i]] != "" ||
-				(len(dtc.rl.tcSuggestions) < max && lists.Match(dtc.rl.tcSuggestions, suggestions[i])) {
+				lists.Match(dtc.rl.tcSuggestions, suggestions[i]) {
 				// dedup
 				continue
 			}
