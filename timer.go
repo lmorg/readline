@@ -60,6 +60,7 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 	}
 
 	dtc.rl.tabMutex.Lock()
+	defer dtc.rl.tabMutex.Unlock()
 
 	if len(dtc.rl.tcSuggestions) == 0 {
 		dtc.rl.ForceHintTextUpdate(" ")
@@ -72,7 +73,6 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 	for i := range suggestions {
 		select {
 		case <-dtc.Context.Done():
-			dtc.rl.tabMutex.Unlock()
 			return
 
 		default:
@@ -85,8 +85,6 @@ func (dtc *DelayedTabContext) AppendSuggestions(suggestions []string) {
 			dtc.rl.tcSuggestions = append(dtc.rl.tcSuggestions, suggestions[i])
 		}
 	}
-
-	dtc.rl.tabMutex.Unlock()
 
 	output := dtc.rl.clearHelpersStr()
 	//dtc.rl.ForceHintTextUpdate(" ")
