@@ -2,18 +2,24 @@
 
 ## Changelog
 
+### 4.2.1
+
+* bugfix: remove max count I think was a possible cause of duplications
+* bugfix: fixed potential condition with dups detection
+* bugfix: fixed potential deadlock with mutex
+
 ### 4.2.0
 
-* readline: null check when using tab grid
-* readline: improved SGR detection
-* readline: fixed wider character rendering bug when using tab grid
-* readline: fixed potential race condition with read/write access to unicode slices
-* readline: fixed potential race condition with terminal width caching
-* readline: fixed potential race condition with asynchronous updates to tab completion
-* readline: fixed potential race condition with hint text height reporting
-* readline: fixed potential race condition with tab completion height reporting
-* readline: fixed potential race condition with previews
-* readline: fixed potential race condition with hint text cache
+* bugfix: null check when using tab grid
+* bugfix: improved SGR detection
+* bugfix: fixed wider character rendering bug when using tab grid
+* bugfix: fixed potential race condition with read/write access to unicode slices
+* bugfix: fixed potential race condition with terminal width caching
+* bugfix: fixed potential race condition with asynchronous updates to tab completion
+* bugfix: fixed potential race condition with hint text height reporting
+* bugfix: fixed potential race condition with tab completion height reporting
+* bugfix: fixed potential race condition with previews
+* bugfix: fixed potential race condition with hint text cache
 
 ### 4.1.4
 
