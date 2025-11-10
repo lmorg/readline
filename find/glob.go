@@ -1,6 +1,9 @@
 package find
 
-import "path"
+import (
+	"path"
+	"strings"
+)
 
 type glob struct{ pattern string }
 
@@ -11,7 +14,7 @@ func newGlobFind(pattern string) (*glob, error) {
 }
 
 func (g *glob) MatchString(item string) bool {
-	found, _ := path.Match(g.pattern, item)
+	found, _ := path.Match(g.pattern, strings.ToLower(item))
 	return found
 }
 
