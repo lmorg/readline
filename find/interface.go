@@ -42,7 +42,7 @@ func New(pattern string) (FindT, error) {
 		return newGlobFind(pattern)
 
 	default:
-		if strings.Contains(pattern, "*") {
+		if strings.Contains(pattern, "*") || strings.Contains(pattern, "?") {
 			return newGlobFind(pattern)
 		}
 	}
