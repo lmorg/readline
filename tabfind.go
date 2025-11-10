@@ -1,6 +1,11 @@
 package readline
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/lmorg/readline/v4/find"
+)
 
 func (rl *Instance) backspaceTabFindStr() string {
 	if len(rl.tfLine) > 0 {
@@ -17,23 +22,23 @@ func _updateTabFindHelpersStr(rl *Instance) (output string) {
 	return
 }
 
+func hintTextFindSearchStr(s string) []rune { return []rune(fmt.Sprintf("%s match: ", s)) }
+func hintTextFindCancelStr(s string) []rune { return []rune(fmt.Sprintf("Cancelled %s match", s)) }
+
 func (rl *Instance) updateTabFindStr(r []rune) string {
 	rl.tfLine = append(rl.tfLine, r...)
 
 	rl.tabMutex.Lock()
 
 	if len(rl.tfLine) == 0 {
-		rl.hintText = rFindSearchPart
+		rl.hintText = hintTextFindSearchStr("partial word")
 		rl.tfSuggestions = append(rl.tcSuggestions, []string{}...)
 		return _updateTabFindHelpersStr(rl)
 	}
 
-	var (
-		find findT
-		err  error
-	)
-
-	find, rl.rFindSearch, rl.rFindCancel, err = newFuzzyFind(string(rl.tfLine))
+	find, err := find.New(string(rl.tfLine))
+	rl.rFindSearch = hintTextFindSearchStr(find.Description())
+	rl.rFindCancel = hintTextFindCancelStr(find.Description())
 	if err != nil {
 		rl.tfSuggestions = []string{err.Error()}
 		return _updateTabFindHelpersStr(rl)
