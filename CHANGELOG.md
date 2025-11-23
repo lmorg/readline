@@ -2,6 +2,12 @@
 
 ## Changelog
 
+### 4.2.2
+
+* feature: glob matching auto invoked with search term includes `?` (was previously only `*`)
+* feature: glob matching is now case insensitive
+* refactor: find routines are now their own package
+
 ### 4.2.1
 
 * bugfix: remove max count I think was a possible cause of duplications
