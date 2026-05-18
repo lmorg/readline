@@ -26,7 +26,7 @@ type History interface {
 	// internally, this methods return can be structured in whichever way is most
 	// convenient for your own applications (or even just create an empty
 	//function which returns `nil` if you don't require Dump() either)
-	Dump() interface{}
+	Dump() any
 }
 
 // ExampleHistory is an example of a LineHistory interface:
@@ -58,7 +58,7 @@ func (h *ExampleHistory) Len() int {
 }
 
 // Dump returns the entire history
-func (h *ExampleHistory) Dump() interface{} {
+func (h *ExampleHistory) Dump() any {
 	return h.items
 }
 
@@ -82,7 +82,7 @@ func (h *NullHistory) Len() int {
 }
 
 // Dump returns the entire history
-func (h *NullHistory) Dump() interface{} {
+func (h *NullHistory) Dump() any {
 	return []string{}
 }
 

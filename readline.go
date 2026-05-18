@@ -267,13 +267,13 @@ readKey:
 			}
 			rl.tabMutex.Unlock()
 
-			switch {
-			case rl.previewMode == previewModeOpen:
+			switch rl.previewMode {
+			case previewModeOpen:
 				output += rl.clearPreviewStr()
 				output += rl.clearHelpersStr()
 				rl.print(output)
 				continue
-			case rl.previewMode == previewModeAutocomplete:
+			case previewModeAutocomplete:
 				rl.previewMode = previewModeOpen
 				if !rl.modeTabCompletion.Load() {
 					output += rl.clearPreviewStr()
@@ -534,6 +534,10 @@ func (rl *Instance) escapeSeq(r []rune) string {
 		HkFnRecallWord12(rl)
 
 	default:
+		if len(r) > 2 && r[0] == charEscape && r[1] == '_' {
+			return rl.apcSequence(r)
+		}
+
 		if rl.modeTabFind /*|| rl.modeAutoFind*/ {
 			//rl.modeTabFind = false
 			//rl.modeAutoFind = false

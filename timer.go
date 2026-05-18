@@ -32,6 +32,8 @@ func delayedSyntaxTimer(rl *Instance, i int32) {
 	}
 	rl.cacheSyntax.Append(rl.line.Runes(), sLine)
 
+	sLine = contentEditable(sLine)
+
 	if atomic.LoadInt32(&rl.delayedSyntaxCount) != i {
 		return
 	}

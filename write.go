@@ -8,7 +8,7 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-func (rl *Instance) printf(format string, a ...interface{}) {
+func (rl *Instance) printf(format string, a ...any) {
 	s := fmt.Sprintf(format, a...)
 	rl.print(s)
 }
@@ -63,6 +63,8 @@ func (rl *Instance) echoStr() string {
 		promptLen = 0
 	}
 
+	ttyphoon := isTtyphoon()
+
 	switch {
 	case rl.PasswordMask != 0:
 		line += strings.Repeat(string(rl.PasswordMask), rl.line.CellLen())
@@ -77,10 +79,12 @@ func (rl *Instance) echoStr() string {
 		syntax := rl.cacheSyntax.Get(rl.line.Runes())
 		if len(syntax) == 0 {
 			syntax = rl.SyntaxHighlighter(rl.line.Runes())
-
 			if rl.DelayedSyntaxWorker == nil {
 				rl.cacheSyntax.Append(rl.line.Runes(), syntax)
 			}
+		}
+		if ttyphoon {
+			syntax = contentEditable(syntax)
 		}
 		line += syntax
 	}
@@ -93,7 +97,6 @@ func (rl *Instance) echoStr() string {
 	if x > 0 {
 		line += fmt.Sprintf(cursorBackf, x)
 	}
-	//print(line)
 	return line
 }
 
