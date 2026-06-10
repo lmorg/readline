@@ -52,5 +52,9 @@ func (rl *Instance) apcContentEditable(s string) string {
 }
 
 func contentEditable(s string) string {
-	return fmt.Sprintf("%sbegin;content-editable%s%s%send;content-editable;%s%s", seqApc, seqST, s, seqApc, s, seqST)
+	return fmt.Sprintf("%sbegin;content-editable%s%s%send;content-editable;%s%s",
+		seqApc, seqST, //                                 // opening tag
+		s,                                                // content editable content
+		seqApc, rxAnsiSgr.ReplaceAllString(s, ""), seqST, // closing tag
+	)
 }

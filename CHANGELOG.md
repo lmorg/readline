@@ -2,6 +2,11 @@
 
 ## Changelog
 
+### 4.2.3
+
+* feature: support for Ttyphoon's content editable fields
+* bugfix: strip all zero-width ANSI escapes, not just SGR
+
 ### 4.2.2
 
 * feature: glob matching auto invoked with search term includes `?` (was previously only `*`)
