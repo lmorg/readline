@@ -2,6 +2,10 @@
 
 ## Changelog
 
+### 4.2.4
+
+* bugfix: correct invalid named regexp symbol
+
 ### 4.2.3
 
 * feature: support for Ttyphoon's content editable fields
