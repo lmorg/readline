@@ -3,7 +3,7 @@
 
 package readline
 
-import "github.com/lmorg/murex/utils/virtualterm"
+import "github.com/lmorg/readline/v4/virtualterm"
 
 // VTern is a virtual terminal
 var VTerm = virtualterm.NewTerminal(120, 40)

@@ -2,6 +2,10 @@
 
 ## Changelog
 
+### 4.2.5
+
+* testing: moved `virtualterm` package from project `murex` (where it was unused) to `readline`
+
 ### 4.2.4
 
 * bugfix: correct invalid named regexp symbol
@@ -65,13 +69,18 @@ v4.0.0 marks a breaking change to the tab completion function.
 Earlier versions expected multiple parameters to be returned however from
 v4.0.0 onwards, a pointer to a structure is instead expected:
 ```go
-type TabCompleterReturnT struct {
-	Prefix       string
-	Suggestions  []string
-	Descriptions map[string]string
-	DisplayType  TabDisplayType
-	HintCache    HintCacheFuncT
-	Preview      PreviewFuncT
+package main
+
+func main() {
+	type TabCompleterReturnT struct {
+		Prefix       string
+		Suggestions  []string
+		Descriptions map[string]string
+		DisplayType  TabDisplayType
+		HintCache    HintCacheFuncT
+		Preview      PreviewFuncT
+	}
+
 }
 ```
 This allows for more configurability and without the cost of copying multiple
@@ -136,23 +145,35 @@ in a latter release.
 
 **Deprecated constants:**
 ```go
-const (
-	// ErrCtrlC is returned when ctrl+c is pressed
-	ErrCtrlC = "Ctrl+C"
+package main
 
-	// ErrEOF is returned when ctrl+d is pressed
-	ErrEOF = "EOF"
-)
+func main() {
+	const (
+		// ErrCtrlC is returned when ctrl+c is pressed
+		ErrCtrlC = "Ctrl+C"
+
+		// ErrEOF is returned when ctrl+d is pressed
+		ErrEOF = "EOF"
+	)
+
+}
 ```
 
 **New error variables:**
 ```go
-var (
-	// CtrlC is returned when ctrl+c is pressed
-	CtrlC = errors.New("Ctrl+C")
+package main
 
-	// EOF is returned when ctrl+d is pressed
-	// (this is actually the same value as io.EOF)
-	EOF = errors.New("EOF")
-)
+import "errors"
+
+func main() {
+	var (
+		// CtrlC is returned when ctrl+c is pressed
+		CtrlC = errors.New("Ctrl+C")
+
+		// EOF is returned when ctrl+d is pressed
+		// (this is actually the same value as io.EOF)
+		EOF = errors.New("EOF")
+	)
+
+}
 ```
