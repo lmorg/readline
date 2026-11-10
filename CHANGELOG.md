@@ -2,6 +2,10 @@
 
 ## Changelog
 
+### 4.3.0
+
+* chore: update dependencies
+
 ### 4.2.6
 
 * bugfix: switch APC sequences to OSC 1701 because of bug in Apple Terminal (boo Apple, this is basic!)
