@@ -11,7 +11,8 @@ func isTtyphoon() bool {
 }
 
 const (
-	seqApc = "\x1b_"
+	//seqApc = "\x1b_"
+	seqApc = "\x1b]1701;"
 	seqST  = "\x1b\\"
 )
 

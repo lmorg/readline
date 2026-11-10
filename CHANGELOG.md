@@ -2,6 +2,10 @@
 
 ## Changelog
 
+### 4.2.6
+
+* bugfix: switch APC sequences to OSC 1701 because of bug in Apple Terminal (boo Apple, this is basic!)
+
 ### 4.2.5
 
 * testing: moved `virtualterm` package from project `murex` (where it was unused) to `readline`
